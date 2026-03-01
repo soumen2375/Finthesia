@@ -17,6 +17,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { api, Asset, Liability } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { formatCurrency } from '../lib/formatters';
 
 const assetCategories = [
   { id: 'savings', label: 'Savings', icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -61,14 +62,6 @@ export default function NetWorthPage() {
     fetchData();
   }, [refreshKey]);
 
-  const formatCurrency = (value: number) => {
-    if (isPrivacyMode) return '••••••';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
-
   const totalAssets = assets.reduce((acc, curr) => acc + Number(curr.current_value), 0);
   const totalLiabilities = liabilities.reduce((acc, curr) => acc + Number(curr.balance), 0);
   const netWorth = totalAssets - totalLiabilities;
@@ -109,7 +102,7 @@ export default function NetWorthPage() {
       <div className="text-center space-y-2 animate-slam">
         <p className="text-slate-500 text-sm font-medium uppercase tracking-widest">Current Net Worth</p>
         <h2 className="text-5xl font-bold text-slate-900 tracking-tight">
-          {formatCurrency(netWorth)}
+          {formatCurrency(netWorth, isPrivacyMode)}
         </h2>
         <div className="flex items-center justify-center space-x-2">
           <span className="flex items-center text-emerald-500 text-sm font-bold">
@@ -145,7 +138,7 @@ export default function NetWorthPage() {
                   </div>
                 </div>
                 <div className="text-right flex items-center space-x-3">
-                  <p className="font-bold text-slate-900">{formatCurrency(catTotal)}</p>
+                  <p className="font-bold text-slate-900">{formatCurrency(catTotal, isPrivacyMode)}</p>
                   <ChevronRight size={18} className="text-slate-300 group-hover:text-blue-600 transition-colors" />
                 </div>
               </div>
@@ -182,7 +175,7 @@ export default function NetWorthPage() {
                     <p className="text-xs text-slate-500 uppercase tracking-wider">{lib.type}</p>
                   </div>
                 </div>
-                <p className="font-bold text-slate-900">{formatCurrency(lib.balance)}</p>
+                <p className="font-bold text-slate-900">{formatCurrency(lib.balance, isPrivacyMode)}</p>
               </div>
             ))
           )}
@@ -203,7 +196,7 @@ export default function NetWorthPage() {
               {assetCategories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </div>
-          <Input name="value" label="Current Value" type="number" placeholder="0.00" required />
+          <Input name="value" label="Current Value (₹)" type="number" placeholder="0" required />
           <div className="pt-4">
             <Button type="submit" className="w-full">Save Asset</Button>
           </div>
@@ -224,7 +217,7 @@ export default function NetWorthPage() {
               {liabilityTypes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
           </div>
-          <Input name="balance" label="Current Balance" type="number" placeholder="0.00" required />
+          <Input name="balance" label="Current Balance (₹)" type="number" placeholder="0" required />
           <div className="pt-4">
             <Button type="submit" className="w-full">Save Liability</Button>
           </div>

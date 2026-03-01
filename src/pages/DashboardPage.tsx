@@ -11,6 +11,7 @@ import {
 import { cn } from '../lib/utils';
 import { api, NetWorthSummary, Transaction } from '../services/api';
 import { Link } from 'react-router-dom';
+import { formatCurrency } from '../lib/formatters';
 
 export default function DashboardPage() {
   const { isPrivacyMode, refreshKey } = useUI();
@@ -43,14 +44,6 @@ export default function DashboardPage() {
     fetchData();
   }, [refreshKey]);
 
-  const formatCurrency = (value: number) => {
-    if (isPrivacyMode) return '••••••';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
-
   return (
     <div className="space-y-6 pb-8">
       {/* Net Worth Summary */}
@@ -60,7 +53,7 @@ export default function DashboardPage() {
             <p className="text-slate-400 text-sm font-medium uppercase tracking-widest">Total Net Worth</p>
             <div className="flex items-baseline space-x-3">
               <h2 className="text-5xl font-bold tracking-tight">
-                {formatCurrency(summary.netWorth)}
+                {formatCurrency(summary.netWorth, isPrivacyMode)}
               </h2>
               <span className="flex items-center text-emerald-400 text-sm font-bold">
                 <ArrowUpRight size={16} className="mr-1" />
@@ -83,7 +76,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Liquidity</p>
-            <p className="text-xl font-bold text-slate-900">{formatCurrency(summary.totalAssets)}</p>
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(summary.totalAssets, isPrivacyMode)}</p>
           </div>
         </div>
         <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-3">
@@ -92,7 +85,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Credit Used</p>
-            <p className="text-xl font-bold text-slate-900">{formatCurrency(summary.totalLiabilities)}</p>
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(summary.totalLiabilities, isPrivacyMode)}</p>
           </div>
         </div>
       </section>
@@ -128,7 +121,7 @@ export default function DashboardPage() {
                     "font-bold",
                     tx.type === 'income' ? "text-emerald-500" : "text-slate-900"
                   )}>
-                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                    {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, isPrivacyMode)}
                   </p>
                   <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
                     {new Date(tx.transaction_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}

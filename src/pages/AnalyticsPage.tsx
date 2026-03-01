@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { api, Transaction } from '../services/api';
+import { formatCurrency } from '../lib/formatters';
 
 export default function AnalyticsPage() {
   const { isPrivacyMode, refreshKey } = useUI();
@@ -35,15 +36,6 @@ export default function AnalyticsPage() {
     };
     fetchData();
   }, [refreshKey]);
-
-  const formatCurrency = (value: number) => {
-    if (isPrivacyMode) return '••••••';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   // Calculate spending breakdown
   const spendingByCategory = transactions
@@ -177,7 +169,7 @@ export default function AnalyticsPage() {
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: number) => formatCurrency(value, isPrivacyMode)}
                       contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                     />
                   </PieChart>
@@ -188,7 +180,7 @@ export default function AnalyticsPage() {
                   <div key={item.name} className="flex items-center space-x-2">
                     <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="text-xs font-medium text-slate-600 truncate">{item.name}</span>
-                    <span className="text-xs font-bold text-slate-900 ml-auto">{formatCurrency(item.value)}</span>
+                    <span className="text-xs font-bold text-slate-900 ml-auto">{formatCurrency(item.value, isPrivacyMode)}</span>
                   </div>
                 ))}
               </div>
@@ -213,7 +205,7 @@ export default function AnalyticsPage() {
                     <Tooltip 
                       cursor={{ fill: '#f8fafc' }}
                       contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: number) => formatCurrency(value, isPrivacyMode)}
                     />
                     <Bar dataKey="income" fill="#2563EB" radius={[4, 4, 0, 0]} barSize={12} />
                     <Bar dataKey="spending" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={12} />

@@ -65,10 +65,10 @@ export function TransactionModal({ isOpen, onClose, onSuccess }: TransactionModa
       <form className="space-y-4" onSubmit={handleSubmit}>
         <Input 
           name="amount" 
-          label="Amount" 
+          label="Amount (₹)" 
           type="number" 
           step="0.01" 
-          placeholder="0.00" 
+          placeholder="0" 
           required 
           autoFocus
         />

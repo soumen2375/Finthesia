@@ -19,6 +19,7 @@ import { motion } from 'motion/react';
 import { api, Card } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { CardDetailsModal } from '../components/CardDetailsModal';
+import { formatCurrency } from '../lib/formatters';
 
 const BANKS = [
   "HDFC Bank",
@@ -130,14 +131,6 @@ export default function CardsPage() {
     setTotalAmountDue(calculated);
   }, [creditLimit, availableCredit]);
 
-  const formatCurrency = (value: number) => {
-    if (isPrivacyMode) return '••••••';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
-
   const handleAddCard = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -231,10 +224,14 @@ export default function CardsPage() {
                   <div className="flex justify-between items-start h-full flex-col">
                     <div className="flex justify-between w-full">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{card.card_type}</p>
-                        <p className="text-lg font-bold truncate max-w-[200px]">{card.name}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{card.card_type || 'Visa'}</p>
+                        <p className="text-lg font-bold truncate max-w-[220px]">
+                          {card.bank_name || 'Bank'} {card.card_variant || 'Card'}
+                        </p>
                       </div>
-                      <ShieldCheck size={24} className="opacity-50" />
+                      <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md">
+                        <ShieldCheck size={20} className="text-white/80" />
+                      </div>
                     </div>
                     <div className="w-full flex justify-between items-end">
                       <p className="text-xl font-mono tracking-widest">•••• •••• •••• {card.last4}</p>
@@ -252,56 +249,63 @@ export default function CardsPage() {
         </div>
       )}
 
-      {/* Card Details */}
+      {/* Card Details Summary */}
       {activeCard && (
-        <section className="space-y-6">
+        <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className={cn(
             "bg-white rounded-[2.5rem] p-8 border shadow-sm space-y-8 transition-all duration-300",
-            isOverdue ? "border-red-200 ring-1 ring-red-100" : "border-slate-100"
+            isOverdue ? "border-red-100 ring-4 ring-red-50/50" : "border-slate-100"
           )}>
             <div className="flex justify-between items-center">
               <div className="space-y-1">
-                <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">Available Credit</p>
-                <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(activeCard.available_credit)}</h3>
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Available Credit</p>
+                <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(activeCard.available_credit, isPrivacyMode)}</h3>
               </div>
               <div className="text-right space-y-1">
-                <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">Credit Limit</p>
-                <p className="text-lg font-bold text-slate-900">{formatCurrency(activeCard.credit_limit)}</p>
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Credit Limit</p>
+                <p className="text-lg font-bold text-slate-700">{formatCurrency(activeCard.credit_limit, isPrivacyMode)}</p>
               </div>
             </div>
 
             {/* Utilization Bar */}
             <div className="space-y-3">
               <div className="flex justify-between items-end">
-                <p className="text-sm font-bold text-slate-900">Utilization</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Utilization</p>
                 <p className={cn(
-                  "text-sm font-bold",
-                  utilization > 70 ? "text-red-500" : utilization > 30 ? "text-amber-500" : "text-emerald-500"
+                  "text-sm font-bold px-2 py-0.5 rounded-lg",
+                  utilization > 90 ? "bg-red-50 text-red-600" : "text-slate-600"
                 )}>
                   {utilization.toFixed(1)}%
                 </p>
               </div>
-              <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-4 w-full bg-slate-50 rounded-full overflow-hidden p-1 border border-slate-100">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${utilization}%` }}
                   className={cn(
-                    "h-full rounded-full",
-                    utilization > 70 ? "bg-red-500" : utilization > 30 ? "bg-amber-500" : "bg-emerald-500"
+                    "h-full rounded-full transition-colors duration-500",
+                    utilization < 30 ? "bg-emerald-500" : 
+                    utilization < 70 ? "bg-amber-400" : 
+                    utilization < 90 ? "bg-orange-500" : "bg-red-500"
                   )}
                 />
               </div>
-              <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                <span>Used: {formatCurrency(currentBalance)}</span>
-                <span>Left: {formatCurrency(activeCard.available_credit)}</span>
+              <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                <span>Used: {formatCurrency(currentBalance, isPrivacyMode)}</span>
+                <span>Left: {formatCurrency(activeCard.available_credit, isPrivacyMode)}</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl relative overflow-hidden">
-                <Calendar className={cn(isOverdue ? "text-red-600" : "text-blue-600")} size={20} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className={cn(
+                  "h-10 w-10 rounded-xl flex items-center justify-center",
+                  isOverdue ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600"
+                )}>
+                  <Calendar size={20} />
+                </div>
                 <div>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center">
                     Due Date {isOverdue && <span className="ml-2 text-red-600 animate-pulse">Alert!</span>}
                   </p>
                   <p className={cn("text-sm font-bold", isOverdue ? "text-red-600" : "text-slate-900")}>
@@ -309,28 +313,21 @@ export default function CardsPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl">
-                <Receipt className="text-indigo-600" size={20} />
+              <div className="flex items-center space-x-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="h-10 w-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
+                  <Receipt size={20} />
+                </div>
                 <div>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Amount Due</p>
-                  <p className="text-sm font-bold text-slate-900">{formatCurrency(activeCard.total_amount_due || 0)}</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Amount Due</p>
+                  <p className="text-sm font-bold text-slate-900">{formatCurrency(activeCard.total_amount_due || 0, isPrivacyMode)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col space-y-4">
-              {activeCard.billing_cycle && (
-                <div className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Layers className="text-slate-400" size={20} />
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Billing Cycle</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-900">{activeCard.billing_cycle}</span>
-                </div>
-              )}
+            <div className="pt-2">
               <Button 
                 variant="outline" 
-                className="w-full py-4 rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50"
+                className="w-full py-4 rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-sm uppercase tracking-widest"
                 onClick={() => setIsDetailsOpen(true)}
               >
                 View Details
@@ -416,20 +413,20 @@ export default function CardsPage() {
           {/* Limits Section */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Credit Limit</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Credit Limit (₹)</label>
               <Input 
                 type="number" 
-                placeholder="0.00" 
+                placeholder="0" 
                 value={creditLimit || ''} 
                 onChange={(e) => setCreditLimit(Number(e.target.value))} 
                 required 
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Available Credit</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Available Credit (₹)</label>
               <Input 
                 type="number" 
-                placeholder="0.00" 
+                placeholder="0" 
                 value={availableCredit || ''} 
                 onChange={(e) => setAvailableCredit(Number(e.target.value))} 
                 required 
@@ -452,10 +449,11 @@ export default function CardsPage() {
                 <Input name="dueDate" type="date" defaultValue="2026-03-12" required />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Amount Due</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Amount Due (₹)</label>
                 <Input 
                   name="totalAmountDue" 
                   type="number" 
+                  placeholder="0"
                   value={totalAmountDue} 
                   onChange={(e) => setTotalAmountDue(Number(e.target.value))} 
                   required 
