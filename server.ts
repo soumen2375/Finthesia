@@ -48,6 +48,13 @@ db.exec(`
     reward_points INTEGER DEFAULT 0,
     cashback_percent DECIMAL(5, 2) DEFAULT 0,
     monthly_budget DECIMAL(15, 2) DEFAULT 0,
+    statement_generation_day INTEGER,
+    payment_due_day INTEGER,
+    minimum_amount_due DECIMAL(15, 2) DEFAULT 0,
+    utilization_alert_threshold DECIMAL(5, 2) DEFAULT 70,
+    remind_before_days INTEGER DEFAULT 3,
+    remind_on_due_date INTEGER DEFAULT 1,
+    allow_manual_override INTEGER DEFAULT 0,
     isActive INTEGER DEFAULT 1,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -118,6 +125,27 @@ if (!columns.includes('monthly_budget')) {
 if (!columns.includes('isActive')) {
   db.exec('ALTER TABLE cards ADD COLUMN isActive INTEGER DEFAULT 1');
 }
+if (!columns.includes('statement_generation_day')) {
+  db.exec('ALTER TABLE cards ADD COLUMN statement_generation_day INTEGER');
+}
+if (!columns.includes('payment_due_day')) {
+  db.exec('ALTER TABLE cards ADD COLUMN payment_due_day INTEGER');
+}
+if (!columns.includes('minimum_amount_due')) {
+  db.exec('ALTER TABLE cards ADD COLUMN minimum_amount_due DECIMAL(15, 2) DEFAULT 0');
+}
+if (!columns.includes('utilization_alert_threshold')) {
+  db.exec('ALTER TABLE cards ADD COLUMN utilization_alert_threshold DECIMAL(5, 2) DEFAULT 70');
+}
+if (!columns.includes('remind_before_days')) {
+  db.exec('ALTER TABLE cards ADD COLUMN remind_before_days INTEGER DEFAULT 3');
+}
+if (!columns.includes('remind_on_due_date')) {
+  db.exec('ALTER TABLE cards ADD COLUMN remind_on_due_date INTEGER DEFAULT 1');
+}
+if (!columns.includes('allow_manual_override')) {
+  db.exec('ALTER TABLE cards ADD COLUMN allow_manual_override INTEGER DEFAULT 0');
+}
 
 async function startServer() {
   const app = express();
@@ -173,7 +201,9 @@ async function startServer() {
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee, joining_fee, reward_points, cashback_percent,
-        monthly_budget
+        monthly_budget, statement_generation_day, payment_due_day,
+        minimum_amount_due, utilization_alert_threshold,
+        remind_before_days, remind_on_due_date, allow_manual_override
       } = req.body;
       if (!id || !name || !card_type || credit_limit === undefined || available_credit === undefined) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -184,15 +214,21 @@ async function startServer() {
           credit_limit, available_credit, billing_cycle, 
           payment_due_date, total_amount_due, apr, last4, color,
           annual_fee, joining_fee, reward_points, cashback_percent,
-          monthly_budget, isActive
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+          monthly_budget, statement_generation_day, payment_due_day,
+          minimum_amount_due, utilization_alert_threshold,
+          remind_before_days, remind_on_due_date, allow_manual_override,
+          isActive
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
       `);
       stmt.run(
         id, bank_name, card_variant, name, card_type, 
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee || 0, joining_fee || 0, reward_points || 0, cashback_percent || 0,
-        monthly_budget || 0
+        monthly_budget || 0, statement_generation_day, payment_due_day,
+        minimum_amount_due || 0, utilization_alert_threshold || 70,
+        remind_before_days || 3, remind_on_due_date === false ? 0 : 1,
+        allow_manual_override ? 1 : 0
       );
       res.status(201).json({ success: true });
     } catch (error) {
@@ -208,7 +244,10 @@ async function startServer() {
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee, joining_fee, reward_points, cashback_percent,
-        monthly_budget, isActive
+        monthly_budget, statement_generation_day, payment_due_day,
+        minimum_amount_due, utilization_alert_threshold,
+        remind_before_days, remind_on_due_date, allow_manual_override,
+        isActive
       } = req.body;
       const stmt = db.prepare(`
         UPDATE cards SET 
@@ -216,7 +255,10 @@ async function startServer() {
           available_credit = ?, billing_cycle = ?, payment_due_date = ?, 
           total_amount_due = ?, apr = ?, last4 = ?, color = ?,
           annual_fee = ?, joining_fee = ?, reward_points = ?, cashback_percent = ?,
-          monthly_budget = ?, isActive = ?,
+          monthly_budget = ?, statement_generation_day = ?, payment_due_day = ?,
+          minimum_amount_due = ?, utilization_alert_threshold = ?,
+          remind_before_days = ?, remind_on_due_date = ?, allow_manual_override = ?,
+          isActive = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
@@ -225,7 +267,11 @@ async function startServer() {
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee || 0, joining_fee || 0, reward_points || 0, cashback_percent || 0,
-        monthly_budget || 0, isActive === undefined ? 1 : (isActive ? 1 : 0),
+        monthly_budget || 0, statement_generation_day, payment_due_day,
+        minimum_amount_due || 0, utilization_alert_threshold || 70,
+        remind_before_days || 3, remind_on_due_date === false ? 0 : 1,
+        allow_manual_override ? 1 : 0,
+        isActive === undefined ? 1 : (isActive ? 1 : 0),
         req.params.id
       );
       res.json({ success: true });

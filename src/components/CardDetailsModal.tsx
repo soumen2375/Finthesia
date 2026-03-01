@@ -52,6 +52,8 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
   const [isEditingCard, setIsEditingCard] = useState(false);
   const [isRemovingCard, setIsRemovingCard] = useState(false);
   const [removeConfirmText, setRemoveConfirmText] = useState('');
+  const [showCategoryBreakdown, setShowCategoryBreakdown] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen && card.id) {
@@ -82,29 +84,101 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
     return 'bg-red-500';
   };
 
-  const isOverdue = useMemo(() => {
-    if (!card.payment_due_date) return false;
+  const paymentInfo = useMemo(() => {
+    if (!card.payment_due_date) {
+      return { 
+        status: 'N/A', 
+        color: 'text-slate-400', 
+        dotColor: 'bg-slate-300',
+        alert: null,
+        isOverdue: false
+      };
+    }
+    
     const dueDate = new Date(card.payment_due_date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return dueDate < today;
-  }, [card.payment_due_date]);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    const remindBefore = card.remind_before_days ?? 3;
+    
+    // If remindBefore is 0, show "Already paid"
+    if (remindBefore === 0) {
+      return { 
+        status: 'Already paid', 
+        color: 'text-emerald-600', 
+        dotColor: 'bg-emerald-500',
+        alert: null,
+        isOverdue: false
+      };
+    }
+
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { 
+        status: 'Overdue', 
+        color: 'text-red-600', 
+        dotColor: 'bg-red-500 animate-pulse',
+        alert: "⚠ Payment overdue. Pay your bill immediately to avoid late fees and a negative impact on your credit score.",
+        isOverdue: true
+      };
+    }
+    
+    if (diffDays <= remindBefore) {
+      return { 
+        status: `Due in ${diffDays} days`, 
+        color: 'text-amber-600', 
+        dotColor: 'bg-amber-500',
+        alert: "Your payment is due soon. Ensure you have sufficient funds in your linked account.",
+        isOverdue: false
+      };
+    }
+    
+    return { 
+      status: 'Payment on Track', 
+      color: 'text-emerald-600', 
+      dotColor: 'bg-emerald-500',
+      alert: null,
+      isOverdue: false
+    };
+  }, [card.payment_due_date, card.remind_before_days]);
 
   const chartData = useMemo(() => {
     const months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
     return months.map(month => {
       const monthTxs = transactions.filter(tx => {
         const date = new Date(tx.transaction_date);
-        return date.toLocaleString('default', { month: 'short' }) === month;
+        return date.toLocaleString('default', { month: 'short' }) === month && 
+               (tx.type === 'spend' || tx.type === 'expense');
       });
       const total = monthTxs.reduce((sum, tx) => sum + tx.amount, 0);
+      
+      // Category breakdown for this month
+      const categories: Record<string, number> = {};
+      monthTxs.forEach(tx => {
+        categories[tx.category] = (categories[tx.category] || 0) + tx.amount;
+      });
+
       const mockValues: Record<string, number> = {
         'Oct': 4500, 'Nov': 5200, 'Dec': 3800, 'Jan': 6100, 'Feb': 5400, 'Mar': 7250
       };
+      
+      const finalAmount = total || mockValues[month] || 0;
+      
+      // If no real transactions, provide mock categories based on finalAmount
+      const finalCategories = Object.keys(categories).length > 0 ? categories : {
+        Food: finalAmount * 0.3,
+        Travel: finalAmount * 0.2,
+        Shopping: finalAmount * 0.3,
+        Bills: finalAmount * 0.2
+      };
+
       return {
         name: month,
-        amount: total || mockValues[month] || 0,
-        categories: { Food: 30, Travel: 20, Shopping: 30, Bills: 20 }
+        amount: finalAmount,
+        categories: finalCategories
       };
     });
   }, [transactions]);
@@ -173,34 +247,91 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
   const [editFormData, setEditFormData] = useState({
     name: card.name,
     credit_limit: card.credit_limit,
-    billing_cycle: card.billing_cycle,
-    monthly_budget: card.monthly_budget || 0
+    available_credit: card.available_credit,
+    billing_cycle: card.billing_cycle || '',
+    payment_due_date: card.payment_due_date || '',
+    monthly_budget: card.monthly_budget || 0,
+    statement_generation_day: card.statement_generation_day || 1,
+    payment_due_day: card.payment_due_day || 15,
+    minimum_amount_due: card.minimum_amount_due || 0,
+    utilization_alert_threshold: card.utilization_alert_threshold || 70,
+    remind_before_days: card.remind_before_days || 3,
+    remind_on_due_date: card.remind_on_due_date ?? true,
+    allow_manual_override: card.allow_manual_override ?? false,
+    total_amount_due: card.total_amount_due || 0
   });
 
   useEffect(() => {
     setEditFormData({
       name: card.name,
       credit_limit: card.credit_limit,
-      billing_cycle: card.billing_cycle,
-      monthly_budget: card.monthly_budget || 0
+      available_credit: card.available_credit,
+      billing_cycle: card.billing_cycle || '',
+      payment_due_date: card.payment_due_date || '',
+      monthly_budget: card.monthly_budget || 0,
+      statement_generation_day: card.statement_generation_day || 1,
+      payment_due_day: card.payment_due_day || 15,
+      minimum_amount_due: card.minimum_amount_due || 0,
+      utilization_alert_threshold: card.utilization_alert_threshold || 70,
+      remind_before_days: card.remind_before_days || 3,
+      remind_on_due_date: card.remind_on_due_date ?? true,
+      allow_manual_override: card.allow_manual_override ?? false,
+      total_amount_due: card.total_amount_due || 0
     });
   }, [card]);
 
   const isEditChanged = useMemo(() => {
     return editFormData.name !== card.name ||
            Number(editFormData.credit_limit) !== card.credit_limit ||
-           editFormData.billing_cycle !== card.billing_cycle ||
-           Number(editFormData.monthly_budget) !== (card.monthly_budget || 0);
+           Number(editFormData.available_credit) !== card.available_credit ||
+           editFormData.billing_cycle !== (card.billing_cycle || '') ||
+           editFormData.payment_due_date !== (card.payment_due_date || '') ||
+           Number(editFormData.monthly_budget) !== (card.monthly_budget || 0) ||
+           Number(editFormData.statement_generation_day) !== (card.statement_generation_day || 1) ||
+           Number(editFormData.payment_due_day) !== (card.payment_due_day || 15) ||
+           Number(editFormData.minimum_amount_due) !== (card.minimum_amount_due || 0) ||
+           Number(editFormData.utilization_alert_threshold) !== (card.utilization_alert_threshold || 70) ||
+           Number(editFormData.remind_before_days) !== (card.remind_before_days || 3) ||
+           editFormData.remind_on_due_date !== (card.remind_on_due_date ?? true) ||
+           editFormData.allow_manual_override !== (card.allow_manual_override ?? false) ||
+           Number(editFormData.total_amount_due) !== (card.total_amount_due || 0);
   }, [editFormData, card]);
 
   const handleUpdateCard = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Validation
+    const outstanding = editFormData.credit_limit - editFormData.available_credit;
+    if (editFormData.credit_limit < outstanding) {
+      showToast('Credit limit cannot be less than outstanding balance', 'error');
+      return;
+    }
+    if (editFormData.monthly_budget > editFormData.credit_limit) {
+      showToast('Monthly budget cannot exceed credit limit', 'error');
+      return;
+    }
+    if (editFormData.minimum_amount_due >= editFormData.total_amount_due && editFormData.total_amount_due > 0) {
+      showToast('Minimum due must be less than total amount due', 'error');
+      return;
+    }
+
+    setIsSaving(true);
     const updatedCard: Card = {
       ...card,
       name: editFormData.name,
       credit_limit: Number(editFormData.credit_limit),
+      available_credit: Number(editFormData.available_credit),
       billing_cycle: editFormData.billing_cycle,
+      payment_due_date: editFormData.payment_due_date,
       monthly_budget: Number(editFormData.monthly_budget),
+      statement_generation_day: Number(editFormData.statement_generation_day),
+      payment_due_day: Number(editFormData.payment_due_day),
+      minimum_amount_due: Number(editFormData.minimum_amount_due),
+      utilization_alert_threshold: Number(editFormData.utilization_alert_threshold),
+      remind_before_days: Number(editFormData.remind_before_days),
+      remind_on_due_date: editFormData.remind_on_due_date,
+      allow_manual_override: editFormData.allow_manual_override,
+      total_amount_due: Number(editFormData.total_amount_due)
     };
     try {
       await api.updateCard(updatedCard);
@@ -209,6 +340,18 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
       onUpdate();
     } catch (error) {
       showToast('Failed to update card', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCloseEdit = () => {
+    if (isEditChanged) {
+      if (confirm('Discard unsaved changes?')) {
+        setIsEditingCard(false);
+      }
+    } else {
+      setIsEditingCard(false);
     }
   };
 
@@ -290,9 +433,9 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                 <div>
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Payment Status</p>
                   <div className="flex items-center space-x-2">
-                    <div className={cn("h-2 w-2 rounded-full", isOverdue ? "bg-red-500 animate-pulse" : "bg-emerald-500")} />
-                    <span className={cn("text-lg font-bold", isOverdue ? "text-red-600" : "text-emerald-600")}>
-                      {isOverdue ? 'Overdue' : 'Payment on Track'}
+                    <div className={cn("h-2 w-2 rounded-full", paymentInfo.dotColor)} />
+                    <span className={cn("text-lg font-bold", paymentInfo.color)}>
+                      {paymentInfo.status}
                     </span>
                   </div>
                 </div>
@@ -304,7 +447,7 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
               <div className="space-y-6">
                 <div>
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Due Date</p>
-                  <p className={cn("text-lg font-bold", isOverdue ? "text-red-600" : "text-slate-900")}>
+                  <p className={cn("text-lg font-bold", paymentInfo.isOverdue ? "text-red-600" : "text-slate-900")}>
                     {card.payment_due_date || 'N/A'}
                   </p>
                 </div>
@@ -315,20 +458,20 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
               </div>
             </div>
 
-            <div className={cn(
-              "p-6 rounded-2xl flex items-start space-x-4 border",
-              isOverdue ? "bg-red-50 border-red-100 text-red-700" : "bg-blue-50 border-blue-100 text-blue-700"
-            )}>
-              <AlertCircle size={24} className="shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-widest">Financial Alert</p>
-                <p className="text-sm leading-relaxed opacity-90">
-                  {isOverdue 
-                    ? "⚠ Payment overdue. Pay your bill immediately to avoid late fees and a negative impact on your credit score."
-                    : "Your payment is due soon. Ensure you have sufficient funds in your linked account."}
-                </p>
+            {paymentInfo.alert && (
+              <div className={cn(
+                "p-6 rounded-2xl flex items-start space-x-4 border",
+                paymentInfo.isOverdue ? "bg-red-50 border-red-100 text-red-700" : "bg-blue-50 border-blue-100 text-blue-700"
+              )}>
+                <AlertCircle size={24} className="shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold uppercase tracking-widest">Financial Alert</p>
+                  <p className="text-sm leading-relaxed opacity-90">
+                    {paymentInfo.alert}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
 
@@ -344,7 +487,7 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
           <div className="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Monthly Spending</p>
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Monthly Spending – This Card Only</p>
                 <div className="flex items-baseline space-x-3">
                   <h4 className="text-3xl font-bold text-slate-900">{formatCurrency(totalSpending, isPrivacyMode)}</h4>
                   <span className={cn(
@@ -355,26 +498,51 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                     {Math.abs(percentChange).toFixed(0)}%
                   </span>
                 </div>
+                <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wider">
+                  {formatCurrency(totalSpending, isPrivacyMode)} of {formatCurrency(card.monthly_budget || 0, isPrivacyMode)} budget ({((totalSpending / (card.monthly_budget || 1)) * 100).toFixed(0)}%)
+                </p>
               </div>
-              <div className="flex bg-slate-50 p-1 rounded-xl">
-                {(['6M', '1Y', 'All'] as const).map((f) => (
+              <div className="flex flex-col sm:items-end gap-3">
+                <div className="flex bg-slate-50 p-1 rounded-xl">
+                  {(['6M', '1Y', 'All'] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setTimeFilter(f)}
+                      className={cn(
+                        "px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all",
+                        timeFilter === f ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex bg-slate-50 p-1 rounded-xl">
                   <button
-                    key={f}
-                    onClick={() => setTimeFilter(f)}
+                    onClick={() => setShowCategoryBreakdown(false)}
                     className={cn(
-                      "px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all",
-                      timeFilter === f ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
+                      !showCategoryBreakdown ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
                     )}
                   >
-                    {f}
+                    Total
                   </button>
-                ))}
+                  <button
+                    onClick={() => setShowCategoryBreakdown(true)}
+                    className={cn(
+                      "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
+                      showCategoryBreakdown ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    By Category
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="h-[320px] w-full">
+            <div className="h-[320px] w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 20, right: 60, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#2563EB" stopOpacity={0.15}/>
@@ -409,7 +577,7 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                               {Object.entries(d.categories).map(([c, v]) => (
                                 <div key={c} className="flex justify-between text-[10px] font-bold">
                                   <span className="text-slate-500">{c}</span>
-                                  <span className="text-slate-900">{formatCurrency(v as number * d.amount / 100, isPrivacyMode)}</span>
+                                  <span className="text-slate-900">{formatCurrency(v as number, isPrivacyMode)}</span>
                                 </div>
                               ))}
                             </div>
@@ -429,9 +597,44 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                     dot={{ r: 4, fill: '#2563EB', strokeWidth: 2, stroke: '#fff' }}
                     activeDot={{ r: 6, fill: '#2563EB', strokeWidth: 0 }}
                   />
-                  <ReferenceLine y={5000} stroke="#EF4444" strokeDasharray="5 5" label={{ position: 'right', value: 'Budget', fill: '#EF4444', fontSize: 10, fontWeight: 'bold' }} />
+                  {card.monthly_budget && (
+                    <ReferenceLine 
+                      y={card.monthly_budget} 
+                      stroke="#EF4444" 
+                      strokeDasharray="5 5" 
+                      label={{ 
+                        position: 'right', 
+                        value: `Budget ${formatCurrencyCompact(card.monthly_budget, isPrivacyMode)}`, 
+                        fill: '#EF4444', 
+                        fontSize: 10, 
+                        fontWeight: 'bold',
+                        dx: 10
+                      }} 
+                    />
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Spending Insight</p>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  {percentChange > 0 
+                    ? `You spent ${percentChange.toFixed(0)}% more than last month. Most increase from Shopping.`
+                    : `Great! You spent ${Math.abs(percentChange).toFixed(0)}% less than last month.`}
+                  {totalSpending > (card.monthly_budget || 0) && (
+                    <span className="text-red-600 font-bold block mt-1">⚠ Budget exceeded by {formatCurrency(totalSpending - (card.monthly_budget || 0), isPrivacyMode)}</span>
+                  )}
+                </p>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Predictive Insight</p>
+                <p className="text-sm text-blue-700 leading-relaxed">
+                  At this pace, you may reach {formatCurrency(totalSpending * 1.2, isPrivacyMode)} by month end. 
+                  Consider limiting non-essential spends.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -570,41 +773,150 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
 
       <Modal
         isOpen={isEditingCard}
-        onClose={() => setIsEditingCard(false)}
-        title="Edit Card"
-        maxWidth="max-w-md"
+        onClose={handleCloseEdit}
+        title="Edit Card Configuration"
+        maxWidth="max-w-2xl"
       >
-        <form onSubmit={handleUpdateCard} className="space-y-6">
-          <Input 
-            label="Card Nickname" 
-            value={editFormData.name} 
-            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-            placeholder="e.g. Primary HDFC"
-            required 
-          />
-          <Input 
-            label="Credit Limit (₹)" 
-            type="number" 
-            value={editFormData.credit_limit} 
-            onChange={(e) => setEditFormData({ ...editFormData, credit_limit: Number(e.target.value) })}
-            required 
-          />
-          <Input 
-            label="Billing Cycle" 
-            value={editFormData.billing_cycle} 
-            onChange={(e) => setEditFormData({ ...editFormData, billing_cycle: e.target.value })}
-            placeholder="e.g. 15th to 14th"
-            required 
-          />
-          <Input 
-            label="Monthly Budget (Optional) (₹)" 
-            type="number" 
-            value={editFormData.monthly_budget} 
-            onChange={(e) => setEditFormData({ ...editFormData, monthly_budget: Number(e.target.value) })}
-          />
-          <div className="flex space-x-3 pt-4">
-            <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={() => setIsEditingCard(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1 rounded-2xl" disabled={!isEditChanged}>Save Changes</Button>
+        <form onSubmit={handleUpdateCard} className="space-y-8 pb-6">
+          {/* Section 1: Card Configuration */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 text-slate-900">
+              <Settings size={16} />
+              <h4 className="text-sm font-bold uppercase tracking-widest">Card Configuration</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input 
+                label="Card Nickname" 
+                value={editFormData.name} 
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                placeholder="e.g. Primary HDFC"
+                required 
+              />
+              <Input 
+                label="Credit Limit (₹)" 
+                type="number" 
+                value={editFormData.credit_limit} 
+                onChange={(e) => setEditFormData({ ...editFormData, credit_limit: Number(e.target.value) })}
+                required 
+              />
+            </div>
+          </div>
+
+          {/* Section 2: Billing & Payment Settings */}
+          <div className="space-y-4 pt-4 border-t border-slate-50">
+            <div className="flex items-center space-x-2 text-slate-900">
+              <Calendar size={16} />
+              <h4 className="text-sm font-bold uppercase tracking-widest">Billing & Payment Settings</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input 
+                label="Billing Cycle" 
+                value={editFormData.billing_cycle} 
+                onChange={(e) => setEditFormData({ ...editFormData, billing_cycle: e.target.value })}
+                placeholder="e.g. 15th to 14th"
+                required 
+              />
+              <Input 
+                label="Payment Due Date" 
+                type="date"
+                value={editFormData.payment_due_date} 
+                onChange={(e) => setEditFormData({ ...editFormData, payment_due_date: e.target.value })}
+                required 
+              />
+            </div>
+          </div>
+
+          {/* Section 3: Financial Tracking Controls */}
+          <div className="space-y-4 pt-4 border-t border-slate-50">
+            <div className="flex items-center space-x-2 text-slate-900">
+              <TrendingUp size={16} />
+              <h4 className="text-sm font-bold uppercase tracking-widest">Financial Tracking Controls</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input 
+                label="Current Outstanding (₹)" 
+                type="number" 
+                value={editFormData.credit_limit - editFormData.available_credit} 
+                onChange={(e) => setEditFormData({ ...editFormData, available_credit: editFormData.credit_limit - Number(e.target.value) })}
+                required 
+              />
+              <Input 
+                label="Minimum Due (₹)" 
+                type="number" 
+                value={editFormData.minimum_amount_due} 
+                onChange={(e) => setEditFormData({ ...editFormData, minimum_amount_due: Number(e.target.value) })}
+              />
+              <Input 
+                label="Monthly Budget (₹)" 
+                type="number" 
+                value={editFormData.monthly_budget} 
+                onChange={(e) => setEditFormData({ ...editFormData, monthly_budget: Number(e.target.value) })}
+              />
+              <Input 
+                label="Amount Due (₹)" 
+                type="number" 
+                value={editFormData.total_amount_due} 
+                onChange={(e) => setEditFormData({ ...editFormData, total_amount_due: Number(e.target.value) })}
+              />
+            </div>
+            <div className="flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl">
+              <input 
+                type="checkbox" 
+                id="manual_override"
+                checked={editFormData.allow_manual_override}
+                onChange={(e) => setEditFormData({ ...editFormData, allow_manual_override: e.target.checked })}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+              />
+              <label htmlFor="manual_override" className="text-xs font-bold text-slate-700">Allow manual statement override</label>
+            </div>
+          </div>
+
+          {/* Section 4: Smart Controls */}
+          <div className="space-y-4 pt-4 border-t border-slate-50">
+            <div className="flex items-center space-x-2 text-slate-900">
+              <AlertCircle size={16} />
+              <h4 className="text-sm font-bold uppercase tracking-widest">Smart Controls</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input 
+                label="Utilization Alert Threshold (%)" 
+                type="number" 
+                min={1} max={100}
+                value={editFormData.utilization_alert_threshold} 
+                onChange={(e) => setEditFormData({ ...editFormData, utilization_alert_threshold: Number(e.target.value) })}
+              />
+              <Input 
+                label="Remind Before (Days)" 
+                type="number" 
+                min={1} max={30}
+                value={editFormData.remind_before_days} 
+                onChange={(e) => setEditFormData({ ...editFormData, remind_before_days: Number(e.target.value) })}
+              />
+            </div>
+            <div className="flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl">
+              <input 
+                type="checkbox" 
+                id="remind_due"
+                checked={editFormData.remind_on_due_date}
+                onChange={(e) => setEditFormData({ ...editFormData, remind_on_due_date: e.target.checked })}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+              />
+              <label htmlFor="remind_due" className="text-xs font-bold text-slate-700">Remind on due date</label>
+            </div>
+          </div>
+
+          <div className="flex space-x-3 pt-6">
+            <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={handleCloseEdit}>Cancel</Button>
+            <Button 
+              type="submit" 
+              className={cn(
+                "flex-1 rounded-2xl transition-all",
+                isEditChanged ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-slate-100 text-slate-400 cursor-not-allowed"
+              )}
+              disabled={!isEditChanged || isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
           </div>
         </form>
       </Modal>

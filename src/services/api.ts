@@ -26,6 +26,13 @@ export interface Card {
   reward_points?: number;
   cashback_percent?: number;
   monthly_budget?: number;
+  statement_generation_day?: number;
+  payment_due_day?: number;
+  minimum_amount_due?: number;
+  utilization_alert_threshold?: number;
+  remind_before_days?: number;
+  remind_on_due_date?: boolean;
+  allow_manual_override?: boolean;
   isActive?: boolean;
   updated_at?: string;
 }
@@ -59,7 +66,7 @@ export interface Transaction {
   category: string;
   description: string;
   transaction_date: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'payment' | 'spend';
   card_id?: string;
   updated_at?: string;
 }

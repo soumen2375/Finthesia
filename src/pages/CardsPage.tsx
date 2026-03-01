@@ -145,6 +145,18 @@ export default function CardsPage() {
       'bg-gradient-to-br from-emerald-500 to-emerald-700'
     ];
     
+    const totalDue = Number(formData.get('totalAmountDue'));
+    const minDue = Number(formData.get('minDue'));
+    
+    if (creditLimit < (creditLimit - availableCredit)) {
+      showToast('Credit limit cannot be less than outstanding balance', 'error');
+      return;
+    }
+    if (minDue >= totalDue && totalDue > 0) {
+      showToast('Minimum due must be less than total amount due', 'error');
+      return;
+    }
+
     const newCard: Card = {
       id: crypto.randomUUID(),
       bank_name: bank,
@@ -157,7 +169,12 @@ export default function CardsPage() {
       payment_due_date: formData.get('dueDate') as string,
       total_amount_due: Number(formData.get('totalAmountDue')),
       last4: Math.floor(1000 + Math.random() * 9000).toString(),
-      color: colors[cards.length % colors.length]
+      color: colors[cards.length % colors.length],
+      minimum_amount_due: Number(formData.get('minDue')),
+      utilization_alert_threshold: 70, // Default
+      remind_before_days: 3, // Default
+      remind_on_due_date: true,
+      allow_manual_override: false
     };
     
     await api.addCard(newCard);
@@ -450,18 +467,20 @@ export default function CardsPage() {
           <div className="space-y-4 pt-2 border-t border-slate-100">
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest">Billing & Payment</h4>
             
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Billing Cycle</label>
-              <Input name="billingCycle" placeholder="e.g. 22nd to 21st" defaultValue="22nd to 21st" required />
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Billing Cycle</label>
+                <Input name="billingCycle" placeholder="e.g. 22nd to 21st" defaultValue="22nd to 21st" required />
+              </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Payment Due Date</label>
                 <Input name="dueDate" type="date" defaultValue="2026-03-12" required />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Amount Due (₹)</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Amount Due (₹)</label>
                 <Input 
                   name="totalAmountDue" 
                   type="number" 
@@ -470,6 +489,10 @@ export default function CardsPage() {
                   onChange={(e) => setTotalAmountDue(Number(e.target.value))} 
                   required 
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Min. Amount Due (₹)</label>
+                <Input name="minDue" type="number" placeholder="0" defaultValue={0} />
               </div>
             </div>
           </div>
