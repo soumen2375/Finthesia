@@ -8,9 +8,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg" }: ModalProps) => {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -28,7 +29,10 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-full max-w-lg bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl pointer-events-auto max-h-[90vh] overflow-y-auto"
+              className={cn(
+                "w-full bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl pointer-events-auto max-h-[90vh] overflow-y-auto",
+                maxWidth
+              )}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-slate-900">{title}</h2>

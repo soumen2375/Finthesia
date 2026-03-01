@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useUI } from '../context/UIContext';
 import { 
   Plus, 
@@ -6,7 +6,10 @@ import {
   AlertCircle,
   ChevronRight,
   Calendar,
-  ShieldCheck
+  ShieldCheck,
+  Building2,
+  Layers,
+  Receipt
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Modal } from '../components/ui/Modal';
@@ -15,14 +18,95 @@ import { Input } from '../components/ui/Input';
 import { motion } from 'motion/react';
 import { api, Card } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { CardDetailsModal } from '../components/CardDetailsModal';
+
+const BANKS = [
+  "HDFC Bank",
+  "SBI Card (State Bank of India)",
+  "ICICI Bank",
+  "Axis Bank",
+  "Kotak Mahindra Bank",
+  "IndusInd Bank",
+  "RBL Bank",
+  "IDFC FIRST Bank",
+  "AU Small Finance Bank",
+  "Yes Bank",
+  "Federal Bank",
+  "South Indian Bank",
+  "City Union Bank",
+  "CSB Bank",
+  "DCB Bank",
+  "Tamilnad Mercantile Bank",
+  "Karnataka Bank",
+  "Karur Vysya Bank",
+  "Bank of Baroda (BOBCARD)",
+  "Bank of India",
+  "Bank of Maharashtra",
+  "Canara Bank",
+  "Punjab National Bank (PNB)",
+  "Union Bank of India",
+  "Indian Bank",
+  "Central Bank of India",
+  "UCO Bank",
+  "IDBI Bank",
+  "HSBC Bank India",
+  "Standard Chartered Bank India",
+  "American Express (AmEx) India",
+  "Other"
+];
+
+const VARIANTS: Record<string, string[]> = {
+  "HDFC Bank": ["Millennia", "Regalia / Regalia Gold", "Infinia / Infinia Metal Edition", "Diners Club Privilege", "Diners Club Black", "MoneyBack / MoneyBack+", "Tata Neu Infinity", "Tata Neu Plus", "IndianOil HDFC", "Swiggy HDFC", "Marriott Bonvoy", "Pixel Card", "Other"],
+  "SBI Card (State Bank of India)": ["SimplySAVE", "SimplyCLICK", "Cashback", "PRIME", "ELITE", "IRCTC SBI Card", "BPCL SBI Card Octane", "Club Vistara Cards (co-branded)", "Other"],
+  "ICICI Bank": ["Amazon Pay ICICI", "Coral", "Rubyx / Rubyx Exclusive", "Sapphiro", "Emeralde", "Platinum Chip", "HPCL Super Saver", "Other variants (travel, rewards, fuel)", "Other"],
+  "Axis Bank": ["ACE", "Flipkart Axis", "My Zone", "Neo", "Rewards", "Select", "Magnus", "Reserve", "Atlas / Miles & More", "Google Pay Flex (co-branded UPI)", "Other"],
+  "Kotak Mahindra Bank": ["League Platinum", "Royale Signature", "Zen Signature", "Solitaire / Solitaire Signature", "PVR Platinum / PVR cards (co-branded)", "Other"],
+  "IndusInd Bank": ["Legend", "Pioneer Heritage", "Solitaire", "Indulge", "Pinnacle World", "Celesta", "EazyDiner (co-branded)", "Other"],
+  "IDFC FIRST Bank": ["Millennia", "Classic", "Select", "Wealth", "Power+ (fuel)", "Private Reserve / Premium variants", "Other"],
+  "RBL Bank": ["BankBazaar SaveMax", "World Safari / World Cards", "Platinum Delight", "XTRA (co-branded fuel etc.)", "Lifestyle / cashback cards", "Other"],
+  "Yes Bank": ["Prosperity Cashback", "Elite+", "Marquee / Premium", "Other customer-specific variants", "Other"],
+  "AU Small Finance Bank": ["LIT", "Zenith+", "Vetta", "Other lifestyle/rewards cards", "Other"],
+  "American Express (AmEx) India": ["SmartEarn", "Gold", "Platinum Travel", "Platinum", "Other"],
+  "HSBC Bank India": ["Cashback", "Live+", "Platinum", "Other"],
+  "Standard Chartered Bank India": ["Rewards", "Platinum Rewards", "Ultimate", "Other"],
+  "Bank of Baroda (BOBCARD)": ["Eterna", "Premier", "Easy", "HPCL BoB", "Other"],
+  "Bank of India": ["Standard rewards", "lifestyle variants", "Other"],
+  "Bank of Maharashtra": ["Basic", "rewards cards", "Other"],
+  "Canara Bank": ["Cashback", "co-branded cards", "Other"],
+  "Punjab National Bank (PNB)": ["Rewards", "basic cards", "Other"],
+  "Union Bank of India": ["Standard rewards", "co-branded cards", "Other"],
+  "Indian Bank": ["Entry", "rewards cards", "Other"],
+  "IDBI Bank": ["Classic", "rewards card variants", "Other"],
+  "Federal Bank": ["Celesta", "Empire", "Signet", "Other"],
+  "South Indian Bank": ["Standard", "Other"],
+  "City Union Bank": ["Standard", "Other"],
+  "CSB Bank": ["Standard", "Other"],
+  "DCB Bank": ["Standard", "Other"],
+  "Tamilnad Mercantile Bank": ["Standard", "Other"],
+  "Karnataka Bank": ["Standard", "Other"],
+  "Karur Vysya Bank": ["Standard", "Other"],
+  "Central Bank of India": ["Standard", "Other"],
+  "UCO Bank": ["Standard", "Other"],
+  "Other": ["Other"]
+};
 
 export default function CardsPage() {
   const { isPrivacyMode, refreshKey } = useUI();
   const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Form states
+  const [selectedBank, setSelectedBank] = useState("");
+  const [customBank, setCustomBank] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState("");
+  const [customVariant, setCustomVariant] = useState("");
+  const [creditLimit, setCreditLimit] = useState<number>(0);
+  const [availableCredit, setAvailableCredit] = useState<number>(0);
+  const [totalAmountDue, setTotalAmountDue] = useState<number>(0);
 
   const fetchCards = async () => {
     setIsLoading(true);
@@ -40,6 +124,12 @@ export default function CardsPage() {
     fetchCards();
   }, [refreshKey]);
 
+  // Auto-calculate Total Amount Due
+  useEffect(() => {
+    const calculated = Math.max(0, creditLimit - availableCredit);
+    setTotalAmountDue(calculated);
+  }, [creditLimit, availableCredit]);
+
   const formatCurrency = (value: number) => {
     if (isPrivacyMode) return '••••••';
     return new Intl.NumberFormat('en-US', {
@@ -51,6 +141,10 @@ export default function CardsPage() {
   const handleAddCard = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
+    const bank = selectedBank === "Other" ? customBank : selectedBank;
+    const variant = selectedVariant === "Other" ? customVariant : selectedVariant;
+    
     const colors = [
       'bg-gradient-to-br from-amber-400 to-amber-600',
       'bg-gradient-to-br from-blue-600 to-indigo-900',
@@ -60,11 +154,15 @@ export default function CardsPage() {
     
     const newCard: Card = {
       id: crypto.randomUUID(),
-      name: formData.get('name') as string,
-      card_type: 'Visa', // Default for now
-      credit_limit: Number(formData.get('limit')),
-      current_balance: Number(formData.get('balance')),
+      bank_name: bank,
+      card_variant: variant,
+      name: `${bank} ${variant}`,
+      card_type: 'Visa', // Default
+      credit_limit: creditLimit,
+      available_credit: availableCredit,
+      billing_cycle: formData.get('billingCycle') as string,
       payment_due_date: formData.get('dueDate') as string,
+      total_amount_due: Number(formData.get('totalAmountDue')),
       last4: Math.floor(1000 + Math.random() * 9000).toString(),
       color: colors[cards.length % colors.length]
     };
@@ -72,11 +170,34 @@ export default function CardsPage() {
     await api.addCard(newCard);
     setIsModalOpen(false);
     showToast(`${newCard.name} added successfully!`, 'success');
+    
+    // Reset form
+    setSelectedBank("");
+    setCustomBank("");
+    setSelectedVariant("");
+    setCustomVariant("");
+    setCreditLimit(0);
+    setAvailableCredit(0);
+    setTotalAmountDue(0);
+    
     fetchCards();
   };
 
   const activeCard = cards[activeCardIndex];
-  const utilization = activeCard ? (activeCard.current_balance / activeCard.credit_limit) * 100 : 0;
+  const utilization = activeCard ? ((activeCard.credit_limit - activeCard.available_credit) / activeCard.credit_limit) * 100 : 0;
+  const currentBalance = activeCard ? activeCard.credit_limit - activeCard.available_credit : 0;
+
+  const isOverdue = useMemo(() => {
+    if (!activeCard?.payment_due_date) return false;
+    const dueDate = new Date(activeCard.payment_due_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return dueDate < today;
+  }, [activeCard?.payment_due_date]);
+
+  const variantsList = useMemo(() => {
+    return VARIANTS[selectedBank] || ["Other"];
+  }, [selectedBank]);
 
   return (
     <div className="space-y-8 pb-8">
@@ -111,7 +232,7 @@ export default function CardsPage() {
                     <div className="flex justify-between w-full">
                       <div className="space-y-1">
                         <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{card.card_type}</p>
-                        <p className="text-lg font-bold">{card.name}</p>
+                        <p className="text-lg font-bold truncate max-w-[200px]">{card.name}</p>
                       </div>
                       <ShieldCheck size={24} className="opacity-50" />
                     </div>
@@ -134,11 +255,14 @@ export default function CardsPage() {
       {/* Card Details */}
       {activeCard && (
         <section className="space-y-6">
-          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm space-y-8">
+          <div className={cn(
+            "bg-white rounded-[2.5rem] p-8 border shadow-sm space-y-8 transition-all duration-300",
+            isOverdue ? "border-red-200 ring-1 ring-red-100" : "border-slate-100"
+          )}>
             <div className="flex justify-between items-center">
               <div className="space-y-1">
-                <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">Current Balance</p>
-                <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(activeCard.current_balance)}</h3>
+                <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">Available Credit</p>
+                <h3 className="text-3xl font-bold text-slate-900">{formatCurrency(activeCard.available_credit)}</h3>
               </div>
               <div className="text-right space-y-1">
                 <p className="text-slate-500 text-xs font-medium uppercase tracking-widest">Credit Limit</p>
@@ -167,29 +291,50 @@ export default function CardsPage() {
                   )}
                 />
               </div>
-              {utilization > 70 && (
-                <div className="flex items-center text-xs text-red-500 font-medium">
-                  <AlertCircle size={14} className="mr-1" />
-                  High utilization may impact your credit score.
-                </div>
-              )}
+              <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                <span>Used: {formatCurrency(currentBalance)}</span>
+                <span>Left: {formatCurrency(activeCard.available_credit)}</span>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl">
-                <Calendar className="text-blue-600" size={20} />
+              <div className="flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl relative overflow-hidden">
+                <Calendar className={cn(isOverdue ? "text-red-600" : "text-blue-600")} size={20} />
                 <div>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Due Date</p>
-                  <p className="text-sm font-bold text-slate-900">{activeCard.payment_due_date || 'N/A'}</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center">
+                    Due Date {isOverdue && <span className="ml-2 text-red-600 animate-pulse">Alert!</span>}
+                  </p>
+                  <p className={cn("text-sm font-bold", isOverdue ? "text-red-600" : "text-slate-900")}>
+                    {activeCard.payment_due_date || 'N/A'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-3 p-4 bg-slate-50 rounded-2xl">
-                <CardIcon className="text-indigo-600" size={20} />
+                <Receipt className="text-indigo-600" size={20} />
                 <div>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">APR</p>
-                  <p className="text-sm font-bold text-slate-900">{activeCard.apr || '18.24'}%</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Amount Due</p>
+                  <p className="text-sm font-bold text-slate-900">{formatCurrency(activeCard.total_amount_due || 0)}</p>
                 </div>
               </div>
+            </div>
+
+            <div className="flex flex-col space-y-4">
+              {activeCard.billing_cycle && (
+                <div className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Layers className="text-slate-400" size={20} />
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Billing Cycle</span>
+                  </div>
+                  <span className="text-sm font-bold text-slate-900">{activeCard.billing_cycle}</span>
+                </div>
+              )}
+              <Button 
+                variant="outline" 
+                className="w-full py-4 rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50"
+                onClick={() => setIsDetailsOpen(true)}
+              >
+                View Details
+              </Button>
             </div>
           </div>
         </section>
@@ -199,21 +344,128 @@ export default function CardsPage() {
         <Plus size={20} className="mr-2" /> Add New Card
       </Button>
 
+      {activeCard && (
+        <CardDetailsModal 
+          isOpen={isDetailsOpen} 
+          onClose={() => setIsDetailsOpen(false)} 
+          card={activeCard}
+          onUpdate={fetchCards}
+        />
+      )}
+
       {/* Modal for adding card */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         title="Add Credit Card"
       >
-        <form className="space-y-4" onSubmit={handleAddCard}>
-          <Input name="name" label="Card Name" placeholder="e.g. Chase Sapphire Preferred" required />
-          <div className="grid grid-cols-2 gap-4">
-            <Input name="limit" label="Credit Limit" type="number" placeholder="0.00" required />
-            <Input name="balance" label="Current Balance" type="number" placeholder="0.00" required />
+        <form className="space-y-6" onSubmit={handleAddCard}>
+          {/* Bank & Variant Section */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center">
+                <Building2 size={14} className="mr-2" /> Choose Bank Name
+              </label>
+              <select 
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                value={selectedBank}
+                onChange={(e) => {
+                  setSelectedBank(e.target.value);
+                  setSelectedVariant("");
+                }}
+                required
+              >
+                <option value="">Select Bank</option>
+                {BANKS.map(bank => <option key={bank} value={bank}>{bank}</option>)}
+              </select>
+              {selectedBank === "Other" && (
+                <Input 
+                  placeholder="Enter Bank Name" 
+                  value={customBank} 
+                  onChange={(e) => setCustomBank(e.target.value)} 
+                  required 
+                />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center">
+                <Layers size={14} className="mr-2" /> Choose Card Variant
+              </label>
+              <select 
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 disabled:opacity-50"
+                value={selectedVariant}
+                onChange={(e) => setSelectedVariant(e.target.value)}
+                disabled={!selectedBank}
+                required
+              >
+                <option value="">Select Variant</option>
+                {variantsList.map(variant => <option key={variant} value={variant}>{variant}</option>)}
+              </select>
+              {selectedVariant === "Other" && (
+                <Input 
+                  placeholder="Enter Variant Name" 
+                  value={customVariant} 
+                  onChange={(e) => setCustomVariant(e.target.value)} 
+                  required 
+                />
+              )}
+            </div>
           </div>
-          <Input name="dueDate" label="Payment Due Date" type="date" required />
+
+          {/* Limits Section */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Credit Limit</label>
+              <Input 
+                type="number" 
+                placeholder="0.00" 
+                value={creditLimit || ''} 
+                onChange={(e) => setCreditLimit(Number(e.target.value))} 
+                required 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Available Credit</label>
+              <Input 
+                type="number" 
+                placeholder="0.00" 
+                value={availableCredit || ''} 
+                onChange={(e) => setAvailableCredit(Number(e.target.value))} 
+                required 
+              />
+            </div>
+          </div>
+
+          {/* Billing & Payment Section */}
+          <div className="space-y-4 pt-2 border-t border-slate-100">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-widest">Billing & Payment</h4>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Billing Cycle</label>
+              <Input name="billingCycle" placeholder="e.g. 22nd to 21st" defaultValue="22nd to 21st" required />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Payment Due Date</label>
+                <Input name="dueDate" type="date" defaultValue="2026-03-12" required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Amount Due</label>
+                <Input 
+                  name="totalAmountDue" 
+                  type="number" 
+                  value={totalAmountDue} 
+                  onChange={(e) => setTotalAmountDue(Number(e.target.value))} 
+                  required 
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="pt-4">
-            <Button type="submit" className="w-full">Save Card</Button>
+            <Button type="submit" className="w-full py-4 rounded-2xl">Save Card</Button>
           </div>
         </form>
       </Modal>
