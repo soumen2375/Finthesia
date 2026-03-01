@@ -244,18 +244,27 @@ export default function CardsPage() {
           </div>
         </section>
       ) : (
-        <div className="h-64 flex items-center justify-center text-slate-400 italic">
-          No cards added yet.
+        <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-4 animate-in fade-in duration-700">
+          <div className="h-20 w-20 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 shadow-inner">
+            <CardIcon size={32} className="text-slate-300" />
+          </div>
+          <div className="text-center space-y-1">
+            <p className="font-bold text-slate-600">No cards added yet</p>
+            <p className="text-sm text-slate-400">Add a credit card to start tracking your finances.</p>
+          </div>
         </div>
       )}
 
       {/* Card Details Summary */}
       {activeCard && (
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className={cn(
-            "bg-white rounded-[2.5rem] p-8 border shadow-sm space-y-8 transition-all duration-300",
-            isOverdue ? "border-red-100 ring-4 ring-red-50/50" : "border-slate-100"
-          )}>
+          <div 
+            onClick={() => setIsDetailsOpen(true)}
+            className={cn(
+              "bg-white rounded-[2.5rem] p-8 border shadow-sm space-y-8 transition-all duration-300 cursor-pointer group",
+              isOverdue ? "border-red-100 ring-4 ring-red-50/50" : "border-slate-100 hover:border-blue-200 hover:shadow-md hover:shadow-blue-500/5"
+            )}
+          >
             <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Available Credit</p>
@@ -324,14 +333,17 @@ export default function CardsPage() {
               </div>
             </div>
 
-            <div className="pt-2">
-              <Button 
-                variant="outline" 
-                className="w-full py-4 rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-sm uppercase tracking-widest"
-                onClick={() => setIsDetailsOpen(true)}
+            <div className="pt-2 flex justify-center">
+              <button 
+                className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-all flex items-center group/btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDetailsOpen(true);
+                }}
               >
-                View Details
-              </Button>
+                View Details 
+                <ChevronRight size={14} className="ml-1 transition-transform group-hover/btn:translate-x-1" />
+              </button>
             </div>
           </div>
         </section>

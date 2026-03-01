@@ -16,7 +16,9 @@ import {
   Calendar,
   Receipt,
   BarChart3,
-  Settings
+  Settings,
+  MoreVertical,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -46,6 +48,10 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
   const [editingEMI, setEditingEMI] = useState<EMI | null>(null);
   const [isEditingFees, setIsEditingFees] = useState(false);
   const [timeFilter, setTimeFilter] = useState<'6M' | '1Y' | 'All'>('6M');
+  const [showMenu, setShowMenu] = useState(false);
+  const [isEditingCard, setIsEditingCard] = useState(false);
+  const [isRemovingCard, setIsRemovingCard] = useState(false);
+  const [removeConfirmText, setRemoveConfirmText] = useState('');
 
   useEffect(() => {
     if (isOpen && card.id) {
@@ -164,10 +170,109 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
     }
   };
 
+  const [editFormData, setEditFormData] = useState({
+    name: card.name,
+    credit_limit: card.credit_limit,
+    billing_cycle: card.billing_cycle,
+    monthly_budget: card.monthly_budget || 0
+  });
+
+  useEffect(() => {
+    setEditFormData({
+      name: card.name,
+      credit_limit: card.credit_limit,
+      billing_cycle: card.billing_cycle,
+      monthly_budget: card.monthly_budget || 0
+    });
+  }, [card]);
+
+  const isEditChanged = useMemo(() => {
+    return editFormData.name !== card.name ||
+           Number(editFormData.credit_limit) !== card.credit_limit ||
+           editFormData.billing_cycle !== card.billing_cycle ||
+           Number(editFormData.monthly_budget) !== (card.monthly_budget || 0);
+  }, [editFormData, card]);
+
+  const handleUpdateCard = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const updatedCard: Card = {
+      ...card,
+      name: editFormData.name,
+      credit_limit: Number(editFormData.credit_limit),
+      billing_cycle: editFormData.billing_cycle,
+      monthly_budget: Number(editFormData.monthly_budget),
+    };
+    try {
+      await api.updateCard(updatedCard);
+      showToast('Card updated successfully', 'success');
+      setIsEditingCard(false);
+      onUpdate();
+    } catch (error) {
+      showToast('Failed to update card', 'error');
+    }
+  };
+
+  const handleRemoveCard = async () => {
+    const hasPending = (card.total_amount_due || 0) > 0 || emis.length > 0;
+    if (hasPending && removeConfirmText !== 'REMOVE') {
+      showToast('Please type REMOVE to confirm', 'error');
+      return;
+    }
+
+    try {
+      await api.deleteCard(card.id);
+      showToast('Card removed successfully', 'success');
+      setIsRemovingCard(false);
+      onClose();
+      onUpdate();
+    } catch (error) {
+      showToast('Failed to remove card', 'error');
+    }
+  };
+
   const cardTitle = `${card.bank_name || 'Unknown Bank'} - ${card.card_variant || 'Unknown Variant'}`;
 
+  const headerActions = (
+    <div className="relative">
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400"
+      >
+        <MoreVertical size={20} />
+      </button>
+      {showMenu && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-20 animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => { setShowMenu(false); setIsEditingCard(true); }}
+              className="w-full px-4 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 flex items-center space-x-3"
+            >
+              <Edit2 size={16} className="text-slate-400" />
+              <span>Edit Card</span>
+            </button>
+            <button
+              onClick={() => { setShowMenu(false); setIsRemovingCard(true); }}
+              className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 flex items-center space-x-3"
+            >
+              <Trash2 size={16} className="text-red-400" />
+              <span>Remove Card</span>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={cardTitle} maxWidth="max-w-4xl">
+    <>
+      <Modal 
+        isOpen={isOpen} 
+        onClose={onClose} 
+        title={cardTitle} 
+        maxWidth="max-w-4xl"
+        headerActions={headerActions}
+      >
       <div className="flex flex-col space-y-10 pb-10">
         
         {/* 1. Billing & Payment Section */}
@@ -462,5 +567,118 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
         </section>
       </div>
     </Modal>
+
+      <Modal
+        isOpen={isEditingCard}
+        onClose={() => setIsEditingCard(false)}
+        title="Edit Card"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleUpdateCard} className="space-y-6">
+          <Input 
+            label="Card Nickname" 
+            value={editFormData.name} 
+            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+            placeholder="e.g. Primary HDFC"
+            required 
+          />
+          <Input 
+            label="Credit Limit (₹)" 
+            type="number" 
+            value={editFormData.credit_limit} 
+            onChange={(e) => setEditFormData({ ...editFormData, credit_limit: Number(e.target.value) })}
+            required 
+          />
+          <Input 
+            label="Billing Cycle" 
+            value={editFormData.billing_cycle} 
+            onChange={(e) => setEditFormData({ ...editFormData, billing_cycle: e.target.value })}
+            placeholder="e.g. 15th to 14th"
+            required 
+          />
+          <Input 
+            label="Monthly Budget (Optional) (₹)" 
+            type="number" 
+            value={editFormData.monthly_budget} 
+            onChange={(e) => setEditFormData({ ...editFormData, monthly_budget: Number(e.target.value) })}
+          />
+          <div className="flex space-x-3 pt-4">
+            <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={() => setIsEditingCard(false)}>Cancel</Button>
+            <Button type="submit" className="flex-1 rounded-2xl" disabled={!isEditChanged}>Save Changes</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Remove Card Modal */}
+      <Modal
+        isOpen={isRemovingCard}
+        onClose={() => setIsRemovingCard(false)}
+        title="Remove Card"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-6">
+          <div className="bg-red-50 p-6 rounded-3xl border border-red-100 flex items-start space-x-4">
+            <AlertTriangle className="text-red-600 shrink-0 mt-1" size={24} />
+            <div className="space-y-2">
+              <p className="text-red-900 font-bold">Are you sure you want to remove this card?</p>
+              <p className="text-red-700 text-sm leading-relaxed">
+                This will soft-delete the card. You can restore it later from settings, but it will no longer appear in your active dashboard.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-slate-700 uppercase tracking-widest">This will:</p>
+            <ul className="space-y-2">
+              {[
+                'Hide all transaction history for this card',
+                'Stop tracking active EMIs',
+                'Disable billing alerts'
+              ].map((item, i) => (
+                <li key={i} className="flex items-center space-x-3 text-sm text-slate-600">
+                  <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {((card.total_amount_due || 0) > 0 || emis.length > 0) && (
+            <div className="space-y-4 pt-2">
+              <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                <p className="text-xs font-bold text-amber-800 flex items-center">
+                  <AlertCircle size={14} className="mr-2" />
+                  PENDING OBLIGATIONS DETECTED
+                </p>
+                <p className="text-xs text-amber-700 mt-1">
+                  You have pending dues or active EMIs on this card.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type REMOVE to confirm</label>
+                <Input 
+                  value={removeConfirmText}
+                  onChange={(e) => setRemoveConfirmText(e.target.value)}
+                  placeholder="REMOVE"
+                  className="border-red-100 focus:border-red-300"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex space-x-3 pt-4">
+            <Button variant="outline" className="flex-1 rounded-2xl" onClick={() => setIsRemovingCard(false)}>Cancel</Button>
+            <Button 
+              variant="primary" 
+              className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 border-none"
+              onClick={handleRemoveCard}
+              disabled={((card.total_amount_due || 0) > 0 || emis.length > 0) && removeConfirmText !== 'REMOVE'}
+            >
+              Remove Card
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }

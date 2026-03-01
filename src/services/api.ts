@@ -25,6 +25,8 @@ export interface Card {
   joining_fee?: number;
   reward_points?: number;
   cashback_percent?: number;
+  monthly_budget?: number;
+  isActive?: boolean;
   updated_at?: string;
 }
 
@@ -136,6 +138,11 @@ export const api = {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(card),
+    });
+  },
+  async deleteCard(id: string): Promise<void> {
+    await fetch(`/api/cards/${id}`, {
+      method: 'DELETE',
     });
   }
 };

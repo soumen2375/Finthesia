@@ -43,6 +43,12 @@ db.exec(`
     apr DECIMAL(5, 2),
     last4 TEXT,
     color TEXT,
+    annual_fee DECIMAL(15, 2) DEFAULT 0,
+    joining_fee DECIMAL(15, 2) DEFAULT 0,
+    reward_points INTEGER DEFAULT 0,
+    cashback_percent DECIMAL(5, 2) DEFAULT 0,
+    monthly_budget DECIMAL(15, 2) DEFAULT 0,
+    isActive INTEGER DEFAULT 1,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -106,6 +112,12 @@ if (!columns.includes('reward_points')) {
 if (!columns.includes('cashback_percent')) {
   db.exec('ALTER TABLE cards ADD COLUMN cashback_percent DECIMAL(5, 2) DEFAULT 0');
 }
+if (!columns.includes('monthly_budget')) {
+  db.exec('ALTER TABLE cards ADD COLUMN monthly_budget DECIMAL(15, 2) DEFAULT 0');
+}
+if (!columns.includes('isActive')) {
+  db.exec('ALTER TABLE cards ADD COLUMN isActive INTEGER DEFAULT 1');
+}
 
 async function startServer() {
   const app = express();
@@ -146,7 +158,7 @@ async function startServer() {
 
   app.get('/api/cards', (req, res) => {
     try {
-      const cards = db.prepare('SELECT * FROM cards ORDER BY updated_at DESC').all();
+      const cards = db.prepare('SELECT * FROM cards WHERE isActive = 1 ORDER BY updated_at DESC').all();
       res.json(cards);
     } catch (error) {
       console.error('Failed to fetch cards:', error);
@@ -160,7 +172,8 @@ async function startServer() {
         id, bank_name, card_variant, name, card_type, 
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
-        annual_fee, joining_fee, reward_points, cashback_percent
+        annual_fee, joining_fee, reward_points, cashback_percent,
+        monthly_budget
       } = req.body;
       if (!id || !name || !card_type || credit_limit === undefined || available_credit === undefined) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -170,14 +183,16 @@ async function startServer() {
           id, bank_name, card_variant, name, card_type, 
           credit_limit, available_credit, billing_cycle, 
           payment_due_date, total_amount_due, apr, last4, color,
-          annual_fee, joining_fee, reward_points, cashback_percent
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          annual_fee, joining_fee, reward_points, cashback_percent,
+          monthly_budget, isActive
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
       `);
       stmt.run(
         id, bank_name, card_variant, name, card_type, 
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
-        annual_fee || 0, joining_fee || 0, reward_points || 0, cashback_percent || 0
+        annual_fee || 0, joining_fee || 0, reward_points || 0, cashback_percent || 0,
+        monthly_budget || 0
       );
       res.status(201).json({ success: true });
     } catch (error) {
@@ -192,7 +207,8 @@ async function startServer() {
         bank_name, card_variant, name, card_type, 
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
-        annual_fee, joining_fee, reward_points, cashback_percent
+        annual_fee, joining_fee, reward_points, cashback_percent,
+        monthly_budget, isActive
       } = req.body;
       const stmt = db.prepare(`
         UPDATE cards SET 
@@ -200,6 +216,7 @@ async function startServer() {
           available_credit = ?, billing_cycle = ?, payment_due_date = ?, 
           total_amount_due = ?, apr = ?, last4 = ?, color = ?,
           annual_fee = ?, joining_fee = ?, reward_points = ?, cashback_percent = ?,
+          monthly_budget = ?, isActive = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `);
@@ -208,11 +225,22 @@ async function startServer() {
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee || 0, joining_fee || 0, reward_points || 0, cashback_percent || 0,
+        monthly_budget || 0, isActive === undefined ? 1 : (isActive ? 1 : 0),
         req.params.id
       );
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to update card:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.delete('/api/cards/:id', (req, res) => {
+    try {
+      db.prepare('UPDATE cards SET isActive = 0 WHERE id = ?').run(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to soft delete card:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
