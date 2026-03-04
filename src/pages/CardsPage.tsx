@@ -23,7 +23,7 @@ import { formatCurrency } from '../lib/formatters';
 
 const BANKS = [
   "HDFC Bank",
-  "SBI Card (State Bank of India)",
+  "SBI Card",
   "ICICI Bank",
   "Axis Bank",
   "Kotak Mahindra Bank",
@@ -58,8 +58,8 @@ const BANKS = [
 
 const VARIANTS: Record<string, string[]> = {
   "HDFC Bank": ["Millennia", "Regalia / Regalia Gold", "Infinia / Infinia Metal Edition", "Diners Club Privilege", "Diners Club Black", "MoneyBack / MoneyBack+", "Tata Neu Infinity", "Tata Neu Plus", "IndianOil HDFC", "Swiggy HDFC", "Marriott Bonvoy", "Pixel Card", "Other"],
-  "SBI Card (State Bank of India)": ["SimplySAVE", "SimplyCLICK", "Cashback", "PRIME", "ELITE", "IRCTC SBI Card", "BPCL SBI Card Octane", "Club Vistara Cards (co-branded)", "Other"],
-  "ICICI Bank": ["Amazon Pay ICICI", "Coral", "Rubyx / Rubyx Exclusive", "Sapphiro", "Emeralde", "Platinum Chip", "HPCL Super Saver", "Other variants (travel, rewards, fuel)", "Other"],
+  "SBI Card": ["SimplySAVE", "SimplyCLICK", "Cashback", "PRIME", "ELITE", "IRCTC SBI Card", "BPCL SBI Card Octane", "Club Vistara Cards (co-branded)", "Other"],
+  "ICICI Bank": ["Amazon Pay", "Coral", "Rubyx / Rubyx Exclusive", "Sapphiro", "Emeralde", "Platinum Chip", "HPCL Super Saver", "Other variants (travel, rewards, fuel)", "Other"],
   "Axis Bank": ["ACE", "Flipkart Axis", "My Zone", "Neo", "Rewards", "Select", "Magnus", "Reserve", "Atlas / Miles & More", "Google Pay Flex (co-branded UPI)", "Other"],
   "Kotak Mahindra Bank": ["League Platinum", "Royale Signature", "Zen Signature", "Solitaire / Solitaire Signature", "PVR Platinum / PVR cards (co-branded)", "Other"],
   "IndusInd Bank": ["Legend", "Pioneer Heritage", "Solitaire", "Indulge", "Pinnacle World", "Celesta", "EazyDiner (co-branded)", "Other"],
