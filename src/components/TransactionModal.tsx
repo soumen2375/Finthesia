@@ -62,7 +62,7 @@ export function TransactionModal({ isOpen, onClose, onSuccess }: TransactionModa
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction">
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-6" onSubmit={handleSubmit}>
         <Input 
           name="amount" 
           label="Amount (₹)" 
@@ -78,12 +78,12 @@ export function TransactionModal({ isOpen, onClose, onSuccess }: TransactionModa
           placeholder="e.g. Grocery Shopping" 
           required 
         />
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700 ml-1">Category</label>
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-text-muted uppercase tracking-widest ml-1">Category</label>
             <select 
               name="category" 
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-2xl focus:outline-none focus:ring-4 focus:ring-secondary/10 focus:border-secondary transition-all font-medium text-text-dark"
               required
             >
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -97,20 +97,20 @@ export function TransactionModal({ isOpen, onClose, onSuccess }: TransactionModa
             required 
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700 ml-1">Payment Method (Optional)</label>
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-text-muted uppercase tracking-widest ml-1">Payment Method (Optional)</label>
           <select 
             name="card_id" 
-            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+            className="w-full px-4 py-3 bg-background border border-border rounded-2xl focus:outline-none focus:ring-4 focus:ring-secondary/10 focus:border-secondary transition-all font-medium text-text-dark"
           >
             <option value="">Cash / Other</option>
             {cards.map(card => (
-              <option key={card.id} value={card.id}>{card.name} (****{card.last4})</option>
+              <option key={card.id} value={card.id}>{card.bank_name} (****{card.last4})</option>
             ))}
           </select>
         </div>
-        <div className="pt-4">
-          <Button type="submit" className="w-full" isLoading={isLoading}>
+        <div className="pt-6">
+          <Button type="submit" className="w-full py-4 rounded-2xl shadow-lg shadow-primary/20" isLoading={isLoading}>
             Record Transaction
           </Button>
         </div>

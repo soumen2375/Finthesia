@@ -42,17 +42,17 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className={cn(
-                "w-full bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl pointer-events-auto max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden",
+                "w-full bg-card rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl pointer-events-auto max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-border",
                 maxWidth
               )}
             >
-              <div className="flex items-center justify-between p-6 sm:p-8 border-b border-slate-50 shrink-0">
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 truncate pr-4">{title}</h2>
+              <div className="flex items-center justify-between p-6 sm:p-8 border-b border-border shrink-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-text-dark truncate pr-4">{title}</h2>
                 <div className="flex items-center space-x-2 shrink-0">
                   {headerActions}
                   <button
                     onClick={onClose}
-                    className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400"
+                    className="p-2 rounded-full hover:bg-background transition-colors text-text-muted"
                   >
                     <X size={24} />
                   </button>

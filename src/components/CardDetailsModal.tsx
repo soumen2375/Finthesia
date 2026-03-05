@@ -78,10 +78,10 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
   const utilization = (usedAmount / card.credit_limit) * 100;
 
   const getUtilizationColor = (percent: number) => {
-    if (percent < 30) return 'bg-emerald-500';
-    if (percent < 70) return 'bg-amber-400';
+    if (percent < 30) return 'bg-primary';
+    if (percent < 70) return 'bg-warning';
     if (percent < 90) return 'bg-orange-500';
-    return 'bg-red-500';
+    return 'bg-danger';
   };
 
   const paymentInfo = useMemo(() => {
@@ -106,8 +106,8 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
     if (remindBefore === 0) {
       return { 
         status: 'Already paid', 
-        color: 'text-emerald-600', 
-        dotColor: 'bg-emerald-500',
+        color: 'text-primary', 
+        dotColor: 'bg-primary',
         alert: null,
         isOverdue: false
       };
@@ -119,8 +119,8 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
     if (diffDays < 0) {
       return { 
         status: 'Overdue', 
-        color: 'text-red-600', 
-        dotColor: 'bg-red-500 animate-pulse',
+        color: 'text-danger', 
+        dotColor: 'bg-danger animate-pulse',
         alert: "⚠ Payment overdue. Pay your bill immediately to avoid late fees and a negative impact on your credit score.",
         isOverdue: true
       };
@@ -129,8 +129,8 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
     if (diffDays <= remindBefore) {
       return { 
         status: `Due in ${diffDays} days`, 
-        color: 'text-amber-600', 
-        dotColor: 'bg-amber-500',
+        color: 'text-warning', 
+        dotColor: 'bg-warning',
         alert: "Your payment is due soon. Ensure you have sufficient funds in your linked account.",
         isOverdue: false
       };
@@ -138,8 +138,8 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
     
     return { 
       status: 'Payment on Track', 
-      color: 'text-emerald-600', 
-      dotColor: 'bg-emerald-500',
+      color: 'text-primary', 
+      dotColor: 'bg-primary',
       alert: null,
       isOverdue: false
     };
@@ -379,26 +379,26 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
     <div className="relative">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-400"
+        className="p-2 rounded-full hover:bg-background transition-colors text-text-muted"
       >
         <MoreVertical size={20} />
       </button>
       {showMenu && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-20 animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute right-0 mt-2 w-48 bg-card rounded-2xl shadow-xl border border-border py-2 z-20 animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => { setShowMenu(false); setIsEditingCard(true); }}
-              className="w-full px-4 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 flex items-center space-x-3"
+              className="w-full px-4 py-2.5 text-left text-sm font-bold text-text-dark hover:bg-background flex items-center space-x-3"
             >
-              <Edit2 size={16} className="text-slate-400" />
+              <Edit2 size={16} className="text-text-muted" />
               <span>Edit Card</span>
             </button>
             <button
               onClick={() => { setShowMenu(false); setIsRemovingCard(true); }}
-              className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 flex items-center space-x-3"
+              className="w-full px-4 py-2.5 text-left text-sm font-bold text-danger hover:bg-danger/5 flex items-center space-x-3"
             >
-              <Trash2 size={16} className="text-red-400" />
+              <Trash2 size={16} className="text-danger/60" />
               <span>Remove Card</span>
             </button>
           </div>
@@ -421,47 +421,47 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
         {/* 1. Billing & Payment Section */}
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center space-x-3 px-1">
-            <div className="h-8 w-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+            <div className="h-8 w-8 bg-secondary/10 text-secondary rounded-lg flex items-center justify-center shadow-sm">
               <Receipt size={18} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Billing & Payment</h3>
+            <h3 className="text-xl font-bold text-text-dark">Billing & Payment</h3>
           </div>
           
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8">
+          <div className="card p-8 space-y-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Payment Status</p>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest mb-1">Payment Status</p>
                   <div className="flex items-center space-x-2">
-                    <div className={cn("h-2 w-2 rounded-full", paymentInfo.dotColor)} />
+                    <div className={cn("h-2 w-2 rounded-full shadow-sm", paymentInfo.dotColor)} />
                     <span className={cn("text-lg font-bold", paymentInfo.color)}>
                       {paymentInfo.status}
                     </span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Amount Due</p>
-                  <p className="text-3xl font-bold text-slate-900">{formatCurrency(card.total_amount_due || 0, isPrivacyMode)}</p>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest mb-1">Amount Due</p>
+                  <p className="text-3xl font-bold text-text-dark">{formatCurrency(card.total_amount_due || 0, isPrivacyMode)}</p>
                 </div>
               </div>
               <div className="space-y-6">
                 <div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Due Date</p>
-                  <p className={cn("text-lg font-bold", paymentInfo.isOverdue ? "text-red-600" : "text-slate-900")}>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest mb-1">Due Date</p>
+                  <p className={cn("text-lg font-bold", paymentInfo.isOverdue ? "text-danger" : "text-text-dark")}>
                     {card.payment_due_date || 'N/A'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Billing Cycle</p>
-                  <p className="text-lg font-bold text-slate-900">{card.billing_cycle || '15th to 14th'}</p>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest mb-1">Billing Cycle</p>
+                  <p className="text-lg font-bold text-text-dark">{card.billing_cycle || '15th to 14th'}</p>
                 </div>
               </div>
             </div>
 
             {paymentInfo.alert && (
               <div className={cn(
-                "p-6 rounded-2xl flex items-start space-x-4 border",
-                paymentInfo.isOverdue ? "bg-red-50 border-red-100 text-red-700" : "bg-blue-50 border-blue-100 text-blue-700"
+                "p-6 rounded-2xl flex items-start space-x-4 border shadow-sm",
+                paymentInfo.isOverdue ? "bg-danger/5 border-danger/10 text-danger" : "bg-secondary/5 border-secondary/10 text-secondary"
               )}>
                 <AlertCircle size={24} className="shrink-0 mt-0.5" />
                 <div className="space-y-1">
@@ -478,51 +478,51 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
         {/* 2. Monthly Spending Trend Section */}
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center space-x-3 px-1">
-            <div className="h-8 w-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
+            <div className="h-8 w-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
               <BarChart3 size={18} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Monthly Spending Trend</h3>
+            <h3 className="text-xl font-bold text-text-dark">Monthly Spending Trend</h3>
           </div>
 
-          <div className="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8">
+          <div className="card p-6 sm:p-8 space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Monthly Spending – This Card Only</p>
+                <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest mb-1">Monthly Spending – This Card Only</p>
                 <div className="flex items-baseline space-x-3">
-                  <h4 className="text-3xl font-bold text-slate-900">{formatCurrency(totalSpending, isPrivacyMode)}</h4>
+                  <h4 className="text-3xl font-bold text-text-dark">{formatCurrency(totalSpending, isPrivacyMode)}</h4>
                   <span className={cn(
-                    "text-xs font-bold px-2 py-0.5 rounded-full flex items-center",
-                    percentChange >= 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
+                    "text-xs font-bold px-2 py-0.5 rounded-full flex items-center shadow-sm",
+                    percentChange >= 0 ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"
                   )}>
                     {percentChange >= 0 ? <TrendingUp size={12} className="mr-1" /> : <TrendingDown size={12} className="mr-1" />}
                     {Math.abs(percentChange).toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-text-muted mt-1 uppercase tracking-wider">
                   {formatCurrency(totalSpending, isPrivacyMode)} of {formatCurrency(card.monthly_budget || 0, isPrivacyMode)} budget ({((totalSpending / (card.monthly_budget || 1)) * 100).toFixed(0)}%)
                 </p>
               </div>
               <div className="flex flex-col sm:items-end gap-3">
-                <div className="flex bg-slate-50 p-1 rounded-xl">
+                <div className="flex bg-background p-1 rounded-xl border border-border">
                   {(['6M', '1Y', 'All'] as const).map((f) => (
                     <button
                       key={f}
                       onClick={() => setTimeFilter(f)}
                       className={cn(
                         "px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all",
-                        timeFilter === f ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                        timeFilter === f ? "bg-card text-secondary shadow-sm" : "text-text-muted hover:text-text-dark"
                       )}
                     >
                       {f}
                     </button>
                   ))}
                 </div>
-                <div className="flex bg-slate-50 p-1 rounded-xl">
+                <div className="flex bg-background p-1 rounded-xl border border-border">
                   <button
                     onClick={() => setShowCategoryBreakdown(false)}
                     className={cn(
                       "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
-                      !showCategoryBreakdown ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      !showCategoryBreakdown ? "bg-card text-secondary shadow-sm" : "text-text-muted hover:text-text-dark"
                     )}
                   >
                     Total
@@ -531,7 +531,7 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                     onClick={() => setShowCategoryBreakdown(true)}
                     className={cn(
                       "px-3 py-1 text-[10px] font-bold rounded-lg transition-all",
-                      showCategoryBreakdown ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      showCategoryBreakdown ? "bg-card text-secondary shadow-sm" : "text-text-muted hover:text-text-dark"
                     )}
                   >
                     By Category
@@ -545,22 +545,22 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                 <AreaChart data={chartData} margin={{ top: 20, right: 60, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.15}/>
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#2D7FF9" stopOpacity={0.15}/>
+                      <stop offset="95%" stopColor="#2D7FF9" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid vertical={false} stroke="#F8FAFC" strokeDasharray="3 3" />
+                  <CartesianGrid vertical={false} stroke="#E2E8F0" strokeDasharray="3 3" />
                   <XAxis 
                     dataKey="name" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 600 }}
+                    tick={{ fill: '#64748B', fontSize: 11, fontWeight: 600 }}
                     dy={10}
                   />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }}
+                    tick={{ fill: '#64748B', fontSize: 10, fontWeight: 600 }}
                     tickFormatter={(value: number) => formatCurrencyCompact(value, isPrivacyMode)}
                   />
                   <Tooltip 
@@ -568,16 +568,16 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                       if (active && payload && payload.length) {
                         const d = payload[0].payload;
                         return (
-                          <div className="bg-white p-4 rounded-2xl shadow-2xl border border-slate-50 min-w-[200px] space-y-3">
-                            <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label} 2026</p>
-                              <p className="text-sm font-bold text-blue-600">{formatCurrency(d.amount, isPrivacyMode)}</p>
+                          <div className="bg-card p-4 rounded-2xl shadow-2xl border border-border min-w-[200px] space-y-3">
+                            <div className="flex justify-between items-center border-b border-border pb-2">
+                              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{label} 2026</p>
+                              <p className="text-sm font-bold text-secondary">{formatCurrency(d.amount, isPrivacyMode)}</p>
                             </div>
                             <div className="space-y-2">
                               {Object.entries(d.categories).map(([c, v]) => (
                                 <div key={c} className="flex justify-between text-[10px] font-bold">
-                                  <span className="text-slate-500">{c}</span>
-                                  <span className="text-slate-900">{formatCurrency(v as number, isPrivacyMode)}</span>
+                                  <span className="text-text-muted">{c}</span>
+                                  <span className="text-text-dark">{formatCurrency(v as number, isPrivacyMode)}</span>
                                 </div>
                               ))}
                             </div>
@@ -590,12 +590,12 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                   <Area 
                     type="monotone" 
                     dataKey="amount" 
-                    stroke="#2563EB" 
+                    stroke="#2D7FF9" 
                     strokeWidth={3}
                     fillOpacity={1} 
                     fill="url(#colorSpend)"
-                    dot={{ r: 4, fill: '#2563EB', strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 6, fill: '#2563EB', strokeWidth: 0 }}
+                    dot={{ r: 4, fill: '#2D7FF9', strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 6, fill: '#2D7FF9', strokeWidth: 0 }}
                   />
                   {card.monthly_budget && (
                     <ReferenceLine 
@@ -617,20 +617,20 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Spending Insight</p>
-                <p className="text-sm text-slate-600 leading-relaxed">
+              <div className="p-4 bg-background rounded-2xl border border-border shadow-sm">
+                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Spending Insight</p>
+                <p className="text-sm text-text-dark/80 leading-relaxed">
                   {percentChange > 0 
                     ? `You spent ${percentChange.toFixed(0)}% more than last month. Most increase from Shopping.`
                     : `Great! You spent ${Math.abs(percentChange).toFixed(0)}% less than last month.`}
                   {totalSpending > (card.monthly_budget || 0) && (
-                    <span className="text-red-600 font-bold block mt-1">⚠ Budget exceeded by {formatCurrency(totalSpending - (card.monthly_budget || 0), isPrivacyMode)}</span>
+                    <span className="text-danger font-bold block mt-1">⚠ Budget exceeded by {formatCurrency(totalSpending - (card.monthly_budget || 0), isPrivacyMode)}</span>
                   )}
                 </p>
               </div>
-              <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Predictive Insight</p>
-                <p className="text-sm text-blue-700 leading-relaxed">
+              <div className="p-4 bg-secondary/5 rounded-2xl border border-secondary/10 shadow-sm">
+                <p className="text-[10px] font-bold text-secondary/60 uppercase tracking-widest mb-1">Predictive Insight</p>
+                <p className="text-sm text-secondary leading-relaxed">
                   At this pace, you may reach {formatCurrency(totalSpending * 1.2, isPrivacyMode)} by month end. 
                   Consider limiting non-essential spends.
                 </p>
@@ -642,22 +642,22 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
         {/* 3. EMI Tracking Section */}
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center space-x-3 px-1">
-            <div className="h-8 w-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center">
+            <div className="h-8 w-8 bg-warning/10 text-warning rounded-lg flex items-center justify-center shadow-sm">
               <Calendar size={18} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">EMI Tracking</h3>
+            <h3 className="text-xl font-bold text-text-dark">EMI Tracking</h3>
           </div>
 
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
+          <div className="card p-6 space-y-6">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Active EMIs</p>
-              <Button size="sm" variant="outline" className="rounded-xl h-9" onClick={() => setIsAddingEMI(true)}>
+              <p className="text-sm font-bold text-text-muted uppercase tracking-widest">Active EMIs</p>
+              <Button size="sm" variant="outline" className="h-9" onClick={() => setIsAddingEMI(true)}>
                 <Plus size={16} className="mr-2" /> Add EMI
               </Button>
             </div>
 
             {(isAddingEMI || editingEMI) && (
-              <form onSubmit={handleSaveEMI} className="bg-slate-50 p-6 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 border border-slate-100">
+              <form onSubmit={handleSaveEMI} className="bg-background p-6 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 border border-border shadow-inner">
                 <div className="sm:col-span-2">
                   <Input name="description" label="Description" defaultValue={editingEMI?.description} placeholder="e.g. iPhone 15 Pro" required />
                 </div>
@@ -669,8 +669,8 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                   <Input name="next_due_date" label="Next Due Date" type="date" defaultValue={editingEMI?.next_due_date} required />
                 </div>
                 <div className="sm:col-span-2 flex space-x-3 pt-2">
-                  <Button type="submit" className="flex-1 rounded-xl">{editingEMI ? 'Update EMI' : 'Save EMI'}</Button>
-                  <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={() => { setIsAddingEMI(false); setEditingEMI(null); }}>Cancel</Button>
+                  <Button type="submit" className="flex-1">{editingEMI ? 'Update EMI' : 'Save EMI'}</Button>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsAddingEMI(false); setEditingEMI(null); }}>Cancel</Button>
                 </div>
               </form>
             )}
@@ -678,31 +678,31 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-slate-50">
-                    <th className="pb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Item</th>
-                    <th className="pb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Remaining</th>
-                    <th className="pb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Monthly</th>
-                    <th className="pb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Months</th>
-                    <th className="pb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                  <tr className="border-b border-border">
+                    <th className="pb-4 text-[10px] font-bold text-text-muted uppercase tracking-widest">Item</th>
+                    <th className="pb-4 text-[10px] font-bold text-text-muted uppercase tracking-widest text-right">Remaining</th>
+                    <th className="pb-4 text-[10px] font-bold text-text-muted uppercase tracking-widest text-right">Monthly</th>
+                    <th className="pb-4 text-[10px] font-bold text-text-muted uppercase tracking-widest text-center">Months</th>
+                    <th className="pb-4 text-[10px] font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-border">
                   {emis.length === 0 ? (
-                    <tr><td colSpan={5} className="py-12 text-center text-slate-400 text-sm italic">No EMIs currently tracked.</td></tr>
+                    <tr><td colSpan={5} className="py-12 text-center text-text-muted text-sm italic">No EMIs currently tracked.</td></tr>
                   ) : (
                     emis.map(emi => (
                       <tr key={emi.id} className="group">
                         <td className="py-4">
-                          <p className="text-sm font-bold text-slate-900">{emi.description}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">Next: {emi.next_due_date}</p>
+                          <p className="text-sm font-bold text-text-dark">{emi.description}</p>
+                          <p className="text-[10px] text-text-muted font-medium">Next: {emi.next_due_date}</p>
                         </td>
-                        <td className="py-4 text-right text-sm font-bold text-slate-700">{formatCurrency(emi.remaining_amount, isPrivacyMode)}</td>
-                        <td className="py-4 text-right text-sm font-bold text-blue-600">{formatCurrency(emi.monthly_payment, isPrivacyMode)}</td>
-                        <td className="py-4 text-center text-sm font-bold text-slate-500">{emi.remaining_months}</td>
+                        <td className="py-4 text-right text-sm font-bold text-text-dark/80">{formatCurrency(emi.remaining_amount, isPrivacyMode)}</td>
+                        <td className="py-4 text-right text-sm font-bold text-secondary">{formatCurrency(emi.monthly_payment, isPrivacyMode)}</td>
+                        <td className="py-4 text-center text-sm font-bold text-text-muted">{emi.remaining_months}</td>
                         <td className="py-4 text-right">
                           <div className="flex justify-end space-x-1">
-                            <button onClick={() => setEditingEMI(emi)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors"><Edit2 size={14} /></button>
-                            <button onClick={() => handleDeleteEMI(emi.id)} className="p-2 text-slate-300 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                            <button onClick={() => setEditingEMI(emi)} className="p-2 text-text-muted/40 hover:text-secondary transition-colors"><Edit2 size={14} /></button>
+                            <button onClick={() => handleDeleteEMI(emi.id)} className="p-2 text-text-muted/40 hover:text-danger transition-colors"><Trash2 size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -717,16 +717,16 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
         {/* 4. Card Details & Fees Section */}
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center space-x-3 px-1">
-            <div className="h-8 w-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center">
+            <div className="h-8 w-8 bg-background text-text-muted rounded-lg flex items-center justify-center shadow-sm border border-border">
               <Settings size={18} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Card Details & Fees</h3>
+            <h3 className="text-xl font-bold text-text-dark">Card Details & Fees</h3>
           </div>
 
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8">
+          <div className="card p-8 space-y-8">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Fee Structure</p>
-              <Button size="sm" variant="outline" className="rounded-xl h-9" onClick={() => setIsEditingFees(!isEditingFees)}>
+              <p className="text-sm font-bold text-text-muted uppercase tracking-widest">Fee Structure</p>
+              <Button size="sm" variant="outline" className="h-9" onClick={() => setIsEditingFees(!isEditingFees)}>
                 {isEditingFees ? 'Cancel' : <><Edit2 size={16} className="mr-2" /> Edit Details</>}
               </Button>
             </div>
@@ -739,30 +739,30 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
                 <Input name="reward_points" label="Reward Points" type="number" defaultValue={card.reward_points} />
                 <Input name="cashback_percent" label="Cashback %" type="number" step="0.1" defaultValue={card.cashback_percent} />
                 <div className="sm:col-span-2 pt-4">
-                  <Button type="submit" className="w-full rounded-2xl py-4">Save Changes</Button>
+                  <Button type="submit" className="w-full py-4">Save Changes</Button>
                 </div>
               </form>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-10 gap-x-8">
                 <div className="space-y-1">
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Annual Fee</p>
-                  <p className="text-lg font-bold text-slate-900">{formatCurrency(card.annual_fee || 0, isPrivacyMode)}</p>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest">Annual Fee</p>
+                  <p className="text-lg font-bold text-text-dark">{formatCurrency(card.annual_fee || 0, isPrivacyMode)}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Joining Fee</p>
-                  <p className="text-lg font-bold text-slate-900">{formatCurrency(card.joining_fee || 0, isPrivacyMode)}</p>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest">Joining Fee</p>
+                  <p className="text-lg font-bold text-text-dark">{formatCurrency(card.joining_fee || 0, isPrivacyMode)}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Interest Rate (APR)</p>
-                  <p className="text-lg font-bold text-slate-900">{(card.apr || 0).toFixed(1)}%</p>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest">Interest Rate (APR)</p>
+                  <p className="text-lg font-bold text-text-dark">{(card.apr || 0).toFixed(1)}%</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Reward Points</p>
-                  <p className="text-lg font-bold text-slate-900">{(card.reward_points || 0).toLocaleString()}</p>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest">Reward Points</p>
+                  <p className="text-lg font-bold text-text-dark">{(card.reward_points || 0).toLocaleString()}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Cashback</p>
-                  <p className="text-lg font-bold text-slate-900">{(card.cashback_percent || 0).toFixed(1)}%</p>
+                  <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest">Cashback</p>
+                  <p className="text-lg font-bold text-text-dark">{(card.cashback_percent || 0).toFixed(1)}%</p>
                 </div>
               </div>
             )}

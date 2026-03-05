@@ -33,46 +33,46 @@ const settingsSections = [
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-10 pb-12">
       {/* Profile Header */}
-      <div className="flex flex-col items-center text-center space-y-3 animate-slam">
-        <div className="h-24 w-24 rounded-full bg-blue-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl font-bold">
-          SM
+      <div className="flex flex-col items-center text-center space-y-4 animate-slam">
+        <div className="relative">
+          <div className="h-28 w-28 rounded-full bg-secondary border-4 border-card shadow-2xl flex items-center justify-center text-white text-4xl font-bold">
+            SM
+          </div>
+          <div className="absolute bottom-1 right-1 h-6 w-6 bg-primary border-2 border-card rounded-full shadow-sm" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Soumen Maity</h2>
-          <p className="text-slate-500 text-sm font-medium">soumenmaity2375@gmail.com</p>
+          <h2 className="text-3xl font-bold text-text-dark tracking-tight">Soumen Maity</h2>
+          <p className="text-text-muted text-sm font-medium">soumenmaity2375@gmail.com</p>
         </div>
-        <Button variant="secondary" size="sm" className="rounded-full px-6">
+        <Button variant="secondary" size="sm" className="rounded-full px-8 shadow-sm">
           Edit Profile
         </Button>
       </div>
 
       {/* Settings List */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         {settingsSections.map((section) => (
-          <section key={section.title} className="space-y-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-4">
+          <section key={section.title} className="space-y-4">
+            <h3 className="text-xs font-bold text-text-muted uppercase tracking-widest px-6">
               {section.title}
             </h3>
-            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-              {section.items.map((item, i) => (
+            <div className="card overflow-hidden p-0 divide-y divide-border">
+              {section.items.map((item) => (
                 <div 
                   key={item.label} 
-                  className={cn(
-                    "p-5 flex items-center justify-between group cursor-pointer hover:bg-slate-50 transition-colors",
-                    i !== section.items.length - 1 && "border-b border-slate-50"
-                  )}
+                  className="p-6 flex items-center justify-between group cursor-pointer hover:bg-background transition-all"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className="h-10 w-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 transition-colors">
-                      <item.icon size={20} />
+                  <div className="flex items-center space-x-5">
+                    <div className="h-12 w-12 bg-background text-text-muted rounded-2xl flex items-center justify-center border border-border shadow-inner group-hover:bg-card group-hover:text-secondary group-hover:shadow-sm transition-all">
+                      <item.icon size={22} />
                     </div>
-                    <span className="font-bold text-slate-900">{item.label}</span>
+                    <span className="font-bold text-text-dark text-lg">{item.label}</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-slate-400 font-medium">{item.value}</span>
-                    <ChevronRight size={18} className="text-slate-300" />
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-text-muted font-bold">{item.value}</span>
+                    <ChevronRight size={20} className="text-border group-hover:text-text-muted transition-colors" />
                   </div>
                 </div>
               ))}
@@ -82,13 +82,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Logout Button */}
-      <div className="px-4">
-        <Button variant="danger" className="w-full py-4 rounded-3xl bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 shadow-none">
-          <LogOut size={20} className="mr-2" /> Sign Out
+      <div className="px-2">
+        <Button variant="danger" className="w-full py-5 rounded-3xl shadow-sm">
+          <LogOut size={22} className="mr-3" /> Sign Out
         </Button>
       </div>
 
-      <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+      <p className="text-center text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-50">
         Made with precision in Google AI Studio
       </p>
     </div>

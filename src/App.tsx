@@ -7,6 +7,9 @@ import NetWorthPage from './pages/NetWorthPage';
 import CardsPage from './pages/CardsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
+import BudgetsPage from './pages/BudgetsPage';
+import BillsPage from './pages/BillsPage';
+import InsightsPage from './pages/InsightsPage';
 import AppLayout from './components/AppLayout';
 import { UIProvider } from './context/UIContext';
 import { ToastProvider } from './context/ToastContext';
@@ -28,6 +31,9 @@ export default function App() {
             <Route path="/net-worth" element={<NetWorthPage />} />
             <Route path="/cards" element={<CardsPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/budgets" element={<BudgetsPage />} />
+            <Route path="/bills" element={<BillsPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           
