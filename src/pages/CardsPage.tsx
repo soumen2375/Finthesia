@@ -10,7 +10,9 @@ import {
   Layers,
   Receipt,
   RotateCw,
-  MoreVertical
+  TrendingUp,
+  Wallet,
+  Zap
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Modal } from '../components/ui/Modal';
@@ -88,6 +90,12 @@ export default function CardsPage() {
     fetchCards();
   }, [refreshKey]);
 
+  // KPI Calculations
+  const totalCreditLimit = useMemo(() => cards.reduce((sum, c) => sum + (c.credit_limit || 0), 0), [cards]);
+  const totalOutstanding = useMemo(() => cards.reduce((sum, c) => sum + ((c.credit_limit || 0) - (c.available_credit || 0)), 0), [cards]);
+  const avgUtilization = totalCreditLimit > 0 ? (totalOutstanding / totalCreditLimit) * 100 : 0;
+  const upcomingDue = useMemo(() => cards.reduce((sum, c) => sum + (c.total_amount_due || 0), 0), [cards]);
+
   // Auto-calculate Total Amount Due
   useEffect(() => {
     const calculated = Math.max(0, creditLimit - availableCredit);
@@ -113,9 +121,6 @@ export default function CardsPage() {
       'bg-gradient-to-br from-slate-700 to-slate-900',
       'bg-gradient-to-br from-emerald-500 to-emerald-700'
     ];
-    
-    const totalDue = Number(formData.get('totalAmountDue'));
-    const minDue = Number(formData.get('minDue'));
     
     if (creditLimit < (creditLimit - availableCredit)) {
       showToast('Credit limit cannot be less than outstanding balance', 'error');
@@ -175,12 +180,10 @@ export default function CardsPage() {
   }, [activeCard?.payment_due_date]);
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-8 pb-12">
       {/* Header Section */}
       <div className="flex justify-between items-center animate-slam">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-2xl font-bold text-text-dark">My Cards</h2>
-        </div>
+        <h2 className="text-2xl font-bold text-text-dark">Credit Cards</h2>
         <div className="flex items-center space-x-3">
           <button 
             onClick={handleRefresh}
@@ -191,16 +194,115 @@ export default function CardsPage() {
           >
             <RotateCw size={20} />
           </button>
+          <Button size="sm" className="rounded-xl" onClick={() => setIsModalOpen(true)}>
+            <Plus size={18} className="mr-1" /> Add Card
+          </Button>
         </div>
       </div>
 
-      {/* Cards Stack */}
-      <div className="space-y-6">
+      {/* 1. Card Insights KPI Grid */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-slam" style={{ animationDelay: '0.1s' }}>
+        {[
+          { label: 'Total Credit Limit', value: totalCreditLimit, icon: CardIcon, color: 'text-secondary', bg: 'bg-secondary/10' },
+          { label: 'Total Outstanding', value: totalOutstanding, icon: Wallet, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Avg. Utilization', value: `${avgUtilization.toFixed(0)}%`, icon: TrendingUp, color: 'text-warning', bg: 'bg-warning/10' },
+          { label: 'Upcoming Due', value: upcomingDue, icon: Calendar, color: 'text-primary', bg: 'bg-primary/10' },
+        ].map((kpi, i) => (
+          <div key={kpi.label} className="card group">
+            <div className="flex items-center justify-between mb-4">
+              <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-sm", kpi.bg, kpi.color)}>
+                <kpi.icon size={24} />
+              </div>
+            </div>
+            <p className="text-text-muted text-xs font-bold uppercase tracking-widest mb-1">{kpi.label}</p>
+            <h3 className="text-2xl font-bold text-text-dark">
+              {typeof kpi.value === 'number' ? formatCurrency(kpi.value, isPrivacyMode) : kpi.value}
+            </h3>
+          </div>
+        ))}
+      </section>
+
+      {/* 2. Credit Health & Smart Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-slam" style={{ animationDelay: '0.2s' }}>
+        {/* Credit Health Score */}
+        <section className="lg:col-span-2 card overflow-hidden flex flex-col sm:flex-row p-0">
+          <div className="p-8 flex-1 space-y-6">
+            <div className="flex items-center space-x-3">
+              <div className="h-10 w-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                <ShieldCheck size={20} />
+              </div>
+              <h3 className="text-xl font-bold text-text-dark">Credit Health Score</h3>
+            </div>
+            
+            <div className="flex items-end space-x-6">
+              <div className="relative h-32 w-32 flex items-center justify-center">
+                <svg className="h-full w-full transform -rotate-90">
+                  <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-border" />
+                  <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={364} strokeDashoffset={364 - (364 * 78) / 100} className="text-primary" strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-bold text-text-dark">78</span>
+                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">/ 100</span>
+                </div>
+              </div>
+              <div className="flex-1 space-y-4 pb-2">
+                <div className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-widest">
+                  Healthy
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Utilization</p>
+                    <p className="text-sm font-bold text-text-dark">{avgUtilization.toFixed(0)}%</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Payments</p>
+                    <p className="text-sm font-bold text-text-dark">100%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-background p-8 sm:w-64 border-l border-border flex flex-col justify-center space-y-4">
+            <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Total Outstanding</p>
+            <h4 className="text-2xl font-bold text-text-dark">{formatCurrency(totalOutstanding, isPrivacyMode)}</h4>
+            <div className="flex items-center text-primary text-xs font-bold">
+              <TrendingUp size={14} className="mr-1" />
+              <span>Good standing</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Smart Insights */}
+        <section className="bg-secondary rounded-xl p-8 text-white shadow-xl shadow-secondary/20 flex flex-col justify-between relative overflow-hidden transition-all hover:shadow-2xl hover:-translate-y-1">
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center space-x-2">
+              <Zap size={20} className="text-blue-100" />
+              <h3 className="text-lg font-bold">Smart Insights</h3>
+            </div>
+            <p className="text-blue-50 text-sm leading-relaxed">
+              Your credit utilization is {avgUtilization.toFixed(0)}%. 
+              Paying {formatCurrency(totalOutstanding * 0.2, false)} now will reduce it to 30% and boost your score.
+            </p>
+          </div>
+          <button className="relative z-10 w-full py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-sm font-bold transition-all mt-6">
+            Optimize Now
+          </button>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
+        </section>
+      </div>
+
+      {/* 3. Cards Stack & Details */}
+      <div className="space-y-6 animate-slam" style={{ animationDelay: '0.3s' }}>
+        <div className="flex items-center justify-between px-2">
+          <h3 className="text-xl font-bold text-text-dark">My Card Stack</h3>
+          <p className="text-text-muted text-xs font-bold uppercase tracking-widest">{cards.length} Cards Active</p>
+        </div>
+
         {isLoading ? (
           <div className="h-64 w-full bg-slate-200 animate-pulse rounded-3xl" />
         ) : cards.length > 0 ? (
           <div className="space-y-8">
-            <section className="relative h-64 mt-4 animate-slam">
+            <section className="relative h-64 mt-4">
               <div className="absolute inset-0 flex items-center justify-center">
                 {cards.map((card, i) => {
                   const isSelected = i === activeCardIndex;
@@ -358,10 +460,6 @@ export default function CardsPage() {
           </div>
         )}
       </div>
-
-      <Button className="w-full py-5 rounded-3xl shadow-lg bg-white text-text-dark border border-border hover:bg-slate-50 font-bold" onClick={() => setIsModalOpen(true)}>
-        <Plus size={20} className="mr-2" /> Add New Card
-      </Button>
 
       {selectedCard && (
         <CardDetailsModal 
