@@ -77,78 +77,94 @@ export interface NetWorthSummary {
   netWorth: number;
 }
 
+import { auth } from '../lib/firebase';
+
+async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  const token = await auth.currentUser?.getIdToken();
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `HTTP error! status: ${res.status}`);
+  }
+  return res;
+}
+
 export const api = {
   async getAssets(): Promise<Asset[]> {
-    const res = await fetch('/api/assets');
+    const res = await fetchWithAuth('/api/assets');
     return res.json();
   },
   async addAsset(asset: Asset): Promise<void> {
-    await fetch('/api/assets', {
+    await fetchWithAuth('/api/assets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(asset),
     });
   },
   async getLiabilities(): Promise<Liability[]> {
-    const res = await fetch('/api/liabilities');
+    const res = await fetchWithAuth('/api/liabilities');
     return res.json();
   },
   async addLiability(liability: Liability): Promise<void> {
-    await fetch('/api/liabilities', {
+    await fetchWithAuth('/api/liabilities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(liability),
     });
   },
   async getCards(): Promise<Card[]> {
-    const res = await fetch('/api/cards');
+    const res = await fetchWithAuth('/api/cards');
     return res.json();
   },
   async addCard(card: Card): Promise<void> {
-    await fetch('/api/cards', {
+    await fetchWithAuth('/api/cards', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(card),
     });
   },
   async getTransactions(): Promise<Transaction[]> {
-    const res = await fetch('/api/transactions');
+    const res = await fetchWithAuth('/api/transactions');
     return res.json();
   },
   async addTransaction(transaction: Transaction): Promise<void> {
-    await fetch('/api/transactions', {
+    await fetchWithAuth('/api/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(transaction),
     });
   },
   async getNetWorth(): Promise<NetWorthSummary> {
-    const res = await fetch('/api/net-worth');
+    const res = await fetchWithAuth('/api/net-worth');
     return res.json();
   },
   async getEMIs(cardId: string): Promise<EMI[]> {
-    const res = await fetch(`/api/cards/${cardId}/emis`);
+    const res = await fetchWithAuth(`/api/cards/${cardId}/emis`);
     return res.json();
   },
   async addEMI(emi: EMI): Promise<void> {
-    await fetch('/api/emis', {
+    await fetchWithAuth('/api/emis', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(emi),
     });
   },
   async deleteEMI(id: string): Promise<void> {
-    await fetch(`/api/emis/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`/api/emis/${id}`, { method: 'DELETE' });
   },
   async updateCard(card: Card): Promise<void> {
-    await fetch(`/api/cards/${card.id}`, {
+    await fetchWithAuth(`/api/cards/${card.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(card),
     });
   },
   async deleteCard(id: string): Promise<void> {
-    await fetch(`/api/cards/${id}`, {
+    await fetchWithAuth(`/api/cards/${id}`, {
       method: 'DELETE',
     });
   }

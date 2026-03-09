@@ -191,9 +191,9 @@ export default function NetWorthPage() {
             </div>
           </div>
           
-          <div className="h-[300px] w-full relative">
+          <div className="h-[300px] w-full relative min-h-0 min-w-0 flex-1">
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="99%" height="99%">
                 <PieChart>
                   <Pie
                     data={pieData}
@@ -244,8 +244,8 @@ export default function NetWorthPage() {
             </div>
           </div>
 
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full min-h-0 min-w-0 flex-1">
+            <ResponsiveContainer width="99%" height="99%">
               <AreaChart data={growthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">

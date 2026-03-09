@@ -1,16 +1,57 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { createServer as createViteServer } from 'vite';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getAuth, DecodedIdToken } from 'firebase-admin/auth';
+import { readFileSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const db = new Database('finthesia.db');
+
+// Initialize Firebase Admin
+try {
+  const serviceAccount = JSON.parse(readFileSync(path.join(__dirname, 'serviceAccountKey.json'), 'utf-8'));
+  initializeApp({
+    credential: cert(serviceAccount)
+  });
+} catch (error) {
+  console.error("Failed to initialize Firebase Admin:", error);
+}
+
+// Extend Express Request to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: DecodedIdToken;
+    }
+  }
+}
+
+// Auth Middleware
+const authenticateUser = async (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await getAuth().verifyIdToken(token);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    console.error('Error verifying auth token', error);
+    res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+};
 
 // Initialize Database Schema
 db.exec(`
   CREATE TABLE IF NOT EXISTS assets (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     name TEXT NOT NULL,
     category TEXT NOT NULL,
     current_value DECIMAL(15, 2) NOT NULL,
@@ -20,6 +61,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS liabilities (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     balance DECIMAL(15, 2) NOT NULL,
@@ -31,6 +73,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS cards (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     bank_name TEXT,
     card_variant TEXT,
     name TEXT NOT NULL,
@@ -61,6 +104,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS transactions (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     amount DECIMAL(15, 2) NOT NULL,
     category TEXT NOT NULL,
     description TEXT,
@@ -69,8 +113,10 @@ db.exec(`
     card_id TEXT,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  
   CREATE TABLE IF NOT EXISTS emis (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     card_id TEXT NOT NULL,
     description TEXT NOT NULL,
     original_amount DECIMAL(15, 2) NOT NULL,
@@ -82,6 +128,16 @@ db.exec(`
     FOREIGN KEY(card_id) REFERENCES cards(id)
   );
 `);
+
+// Add user_id to all tables if it doesn't exist
+const tables = ['assets', 'liabilities', 'cards', 'transactions', 'emis'];
+tables.forEach(table => {
+  const info = db.pragma(`table_info(${table})`) as any[];
+  if (!info.some(col => col.name === 'user_id')) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN user_id TEXT`);
+    // Default existing records to a generic user_id if needed, but here we just add the column
+  }
+});
 
 // Migration: Add missing columns to cards table if they don't exist
 const tableInfo = db.pragma('table_info(cards)') as any[];
@@ -159,9 +215,9 @@ async function startServer() {
   });
 
   // API Routes
-  app.get('/api/assets', (req, res) => {
+  app.get('/api/assets', authenticateUser, (req, res) => {
     try {
-      const assets = db.prepare('SELECT * FROM assets ORDER BY updated_at DESC').all();
+      const assets = db.prepare('SELECT * FROM assets WHERE user_id = ? ORDER BY updated_at DESC').all(req.user?.uid);
       res.json(assets);
     } catch (error) {
       console.error('Failed to fetch assets:', error);
@@ -169,14 +225,14 @@ async function startServer() {
     }
   });
 
-  app.post('/api/assets', (req, res) => {
+  app.post('/api/assets', authenticateUser, (req, res) => {
     try {
       const { id, name, category, current_value, notes } = req.body;
       if (!id || !name || !category || current_value === undefined) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
-      const stmt = db.prepare('INSERT INTO assets (id, name, category, current_value, notes) VALUES (?, ?, ?, ?, ?)');
-      stmt.run(id, name, category, current_value, notes);
+      const stmt = db.prepare('INSERT INTO assets (id, user_id, name, category, current_value, notes) VALUES (?, ?, ?, ?, ?, ?)');
+      stmt.run(id, req.user?.uid, name, category, current_value, notes);
       res.status(201).json({ success: true });
     } catch (error) {
       console.error('Failed to add asset:', error);
@@ -184,9 +240,9 @@ async function startServer() {
     }
   });
 
-  app.get('/api/cards', (req, res) => {
+  app.get('/api/cards', authenticateUser, (req, res) => {
     try {
-      const cards = db.prepare('SELECT * FROM cards WHERE isActive = 1 ORDER BY updated_at DESC').all();
+      const cards = db.prepare('SELECT * FROM cards WHERE isActive = 1 AND user_id = ? ORDER BY updated_at DESC').all(req.user?.uid);
       res.json(cards);
     } catch (error) {
       console.error('Failed to fetch cards:', error);
@@ -194,7 +250,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/cards', (req, res) => {
+  app.post('/api/cards', authenticateUser, (req, res) => {
     try {
       const { 
         id, bank_name, card_variant, name, card_type, 
@@ -210,7 +266,7 @@ async function startServer() {
       }
       const stmt = db.prepare(`
         INSERT INTO cards (
-          id, bank_name, card_variant, name, card_type, 
+          id, user_id, bank_name, card_variant, name, card_type, 
           credit_limit, available_credit, billing_cycle, 
           payment_due_date, total_amount_due, apr, last4, color,
           annual_fee, joining_fee, reward_points, cashback_percent,
@@ -218,10 +274,10 @@ async function startServer() {
           minimum_amount_due, utilization_alert_threshold,
           remind_before_days, remind_on_due_date, allow_manual_override,
           isActive
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
       `);
       stmt.run(
-        id, bank_name, card_variant, name, card_type, 
+        id, req.user?.uid, bank_name, card_variant, name, card_type, 
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee || 0, joining_fee || 0, reward_points || 0, cashback_percent || 0,
@@ -237,7 +293,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/cards/:id', (req, res) => {
+  app.put('/api/cards/:id', authenticateUser, (req, res) => {
     try {
       const { 
         bank_name, card_variant, name, card_type, 
@@ -260,9 +316,9 @@ async function startServer() {
           remind_before_days = ?, remind_on_due_date = ?, allow_manual_override = ?,
           isActive = ?,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = ? AND user_id = ?
       `);
-      stmt.run(
+      const result = stmt.run(
         bank_name, card_variant, name, card_type, 
         credit_limit, available_credit, billing_cycle, 
         payment_due_date, total_amount_due, apr, last4, color,
@@ -272,8 +328,10 @@ async function startServer() {
         remind_before_days || 3, remind_on_due_date === false ? 0 : 1,
         allow_manual_override ? 1 : 0,
         isActive === undefined ? 1 : (isActive ? 1 : 0),
-        req.params.id
+        req.params.id,
+        req.user?.uid
       );
+      if (result.changes === 0) return res.status(404).json({ error: 'Card not found or unauthorized' });
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to update card:', error);
@@ -281,9 +339,10 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/cards/:id', (req, res) => {
+  app.delete('/api/cards/:id', authenticateUser, (req, res) => {
     try {
-      db.prepare('UPDATE cards SET isActive = 0 WHERE id = ?').run(req.params.id);
+      const result = db.prepare('UPDATE cards SET isActive = 0 WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
+      if (result.changes === 0) return res.status(404).json({ error: 'Card not found or unauthorized' });
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to soft delete card:', error);
@@ -291,9 +350,9 @@ async function startServer() {
     }
   });
 
-  app.get('/api/cards/:id/emis', (req, res) => {
+  app.get('/api/cards/:id/emis', authenticateUser, (req, res) => {
     try {
-      const emis = db.prepare('SELECT * FROM emis WHERE card_id = ? ORDER BY next_due_date ASC').all(req.params.id);
+      const emis = db.prepare('SELECT * FROM emis WHERE card_id = ? AND user_id = ? ORDER BY next_due_date ASC').all(req.params.id, req.user?.uid);
       res.json(emis);
     } catch (error) {
       console.error('Failed to fetch EMIs:', error);
@@ -301,7 +360,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/emis', (req, res) => {
+  app.post('/api/emis', authenticateUser, (req, res) => {
     try {
       const { 
         id, card_id, description, original_amount, 
@@ -309,12 +368,12 @@ async function startServer() {
       } = req.body;
       const stmt = db.prepare(`
         INSERT INTO emis (
-          id, card_id, description, original_amount, 
+          id, user_id, card_id, description, original_amount, 
           remaining_amount, monthly_payment, remaining_months, next_due_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       stmt.run(
-        id, card_id, description, original_amount, 
+        id, req.user?.uid, card_id, description, original_amount, 
         remaining_amount, monthly_payment, remaining_months, next_due_date
       );
       res.status(201).json({ success: true });
@@ -324,9 +383,10 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/emis/:id', (req, res) => {
+  app.delete('/api/emis/:id', authenticateUser, (req, res) => {
     try {
-      db.prepare('DELETE FROM emis WHERE id = ?').run(req.params.id);
+      const result = db.prepare('DELETE FROM emis WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
+      if (result.changes === 0) return res.status(404).json({ error: 'EMI not found or unauthorized' });
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to delete EMI:', error);
@@ -334,9 +394,9 @@ async function startServer() {
     }
   });
 
-  app.get('/api/liabilities', (req, res) => {
+  app.get('/api/liabilities', authenticateUser, (req, res) => {
     try {
-      const liabilities = db.prepare('SELECT * FROM liabilities ORDER BY updated_at DESC').all();
+      const liabilities = db.prepare('SELECT * FROM liabilities WHERE user_id = ? ORDER BY updated_at DESC').all(req.user?.uid);
       res.json(liabilities);
     } catch (error) {
       console.error('Failed to fetch liabilities:', error);
@@ -344,14 +404,14 @@ async function startServer() {
     }
   });
 
-  app.post('/api/liabilities', (req, res) => {
+  app.post('/api/liabilities', authenticateUser, (req, res) => {
     try {
       const { id, name, type, balance, interest_rate, minimum_payment, due_date } = req.body;
       if (!id || !name || !type || balance === undefined) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
-      const stmt = db.prepare('INSERT INTO liabilities (id, name, type, balance, interest_rate, minimum_payment, due_date) VALUES (?, ?, ?, ?, ?, ?, ?)');
-      stmt.run(id, name, type, balance, interest_rate, minimum_payment, due_date);
+      const stmt = db.prepare('INSERT INTO liabilities (id, user_id, name, type, balance, interest_rate, minimum_payment, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+      stmt.run(id, req.user?.uid, name, type, balance, interest_rate, minimum_payment, due_date);
       res.status(201).json({ success: true });
     } catch (error) {
       console.error('Failed to add liability:', error);
@@ -359,9 +419,9 @@ async function startServer() {
     }
   });
 
-  app.get('/api/transactions', (req, res) => {
+  app.get('/api/transactions', authenticateUser, (req, res) => {
     try {
-      const transactions = db.prepare('SELECT * FROM transactions ORDER BY transaction_date DESC').all();
+      const transactions = db.prepare('SELECT * FROM transactions WHERE user_id = ? ORDER BY transaction_date DESC').all(req.user?.uid);
       res.json(transactions);
     } catch (error) {
       console.error('Failed to fetch transactions:', error);
@@ -369,14 +429,14 @@ async function startServer() {
     }
   });
 
-  app.post('/api/transactions', (req, res) => {
+  app.post('/api/transactions', authenticateUser, (req, res) => {
     try {
       const { id, amount, category, description, transaction_date, type, card_id } = req.body;
       if (!id || amount === undefined || !category || !transaction_date || !type) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
-      const stmt = db.prepare('INSERT INTO transactions (id, amount, category, description, transaction_date, type, card_id) VALUES (?, ?, ?, ?, ?, ?, ?)');
-      stmt.run(id, amount, category, description, transaction_date, type, card_id);
+      const stmt = db.prepare('INSERT INTO transactions (id, user_id, amount, category, description, transaction_date, type, card_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+      stmt.run(id, req.user?.uid, amount, category, description, transaction_date, type, card_id);
       res.status(201).json({ success: true });
     } catch (error) {
       console.error('Failed to add transaction:', error);
@@ -384,11 +444,11 @@ async function startServer() {
     }
   });
 
-  app.get('/api/net-worth', (req, res) => {
+  app.get('/api/net-worth', authenticateUser, (req, res) => {
     try {
-      const assetsTotal = db.prepare('SELECT SUM(current_value) as total FROM assets').get() as any;
-      const liabilitiesTotal = db.prepare('SELECT SUM(balance) as total FROM liabilities').get() as any;
-      const cardsTotal = db.prepare('SELECT SUM(credit_limit - available_credit) as total FROM cards').get() as any;
+      const assetsTotal = db.prepare('SELECT SUM(current_value) as total FROM assets WHERE user_id = ?').get(req.user?.uid) as any;
+      const liabilitiesTotal = db.prepare('SELECT SUM(balance) as total FROM liabilities WHERE user_id = ?').get(req.user?.uid) as any;
+      const cardsTotal = db.prepare('SELECT SUM(credit_limit - available_credit) as total FROM cards WHERE isActive = 1 AND user_id = ?').get(req.user?.uid) as any;
       
       const totalAssets = assetsTotal.total || 0;
       const totalLiabilities = (liabilitiesTotal.total || 0) + (cardsTotal.total || 0);

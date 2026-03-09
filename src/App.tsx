@@ -13,35 +13,39 @@ import InsightsPage from './pages/InsightsPage';
 import AppLayout from './components/AppLayout';
 import { UIProvider } from './context/UIContext';
 import { ToastProvider } from './context/ToastContext';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
-    <UIProvider>
-      <ToastProvider>
-        <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          
-          {/* Authenticated Routes */}
-          <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/net-worth" element={<NetWorthPage />} />
-            <Route path="/cards" element={<CardsPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/budgets" element={<BudgetsPage />} />
-            <Route path="/bills" element={<BillsPage />} />
-            <Route path="/insights" element={<InsightsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-          
-          {/* Default route */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-        </Routes>
-        </Router>
-      </ToastProvider>
-    </UIProvider>
+    <AuthProvider>
+      <UIProvider>
+        <ToastProvider>
+          <Router>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              
+              {/* Authenticated Routes */}
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/net-worth" element={<NetWorthPage />} />
+                <Route path="/cards" element={<CardsPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/budgets" element={<BudgetsPage />} />
+                <Route path="/bills" element={<BillsPage />} />
+                <Route path="/insights" element={<InsightsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+              
+              {/* Default route */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Router>
+        </ToastProvider>
+      </UIProvider>
+    </AuthProvider>
   );
 }

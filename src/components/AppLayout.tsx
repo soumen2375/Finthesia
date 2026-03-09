@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  TrendingUp, 
-  CreditCard, 
-  BarChart3, 
-  Settings, 
-  Eye, 
+import {
+  LayoutDashboard,
+  TrendingUp,
+  CreditCard,
+  BarChart3,
+  Settings,
+  Eye,
   EyeOff,
   Plus,
   Calendar,
@@ -15,9 +15,11 @@ import {
   X,
   User,
   Moon,
-  Sun
+  Sun,
+  LogOut
 } from 'lucide-react';
 import { useUI } from '../context/UIContext';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { TransactionModal } from './TransactionModal';
@@ -34,9 +36,15 @@ const navItems = [
 
 export default function AppLayout() {
   const { isPrivacyMode, togglePrivacyMode, isDarkMode, toggleDarkMode } = useUI();
+  const { currentUser, signOut } = useAuth();
   const location = useLocation();
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -67,16 +75,23 @@ export default function AppLayout() {
           ))}
         </nav>
 
-        <div className="p-6 border-t border-border">
+        <div className="p-6 border-t border-border space-y-4">
           <div className="flex items-center space-x-3 p-3 bg-background rounded-2xl">
             <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary/20">
-              SM
+              {getInitials(currentUser?.displayName || currentUser?.email)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-text-dark truncate">Soumen Maity</p>
+              <p className="text-sm font-bold text-text-dark truncate">{currentUser?.displayName || currentUser?.email}</p>
               <p className="text-[10px] font-medium text-text-muted truncate uppercase tracking-wider">Premium Member</p>
             </div>
           </div>
+          <button 
+            onClick={signOut}
+            className="flex w-full items-center justify-center space-x-2 p-2 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500/10 transition-colors text-sm font-medium"
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
         </div>
       </aside>
 
@@ -106,7 +121,7 @@ export default function AppLayout() {
               {isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-primary/20">
-              SM
+              {getInitials(currentUser?.displayName || currentUser?.email)}
             </div>
           </div>
         </header>
@@ -115,7 +130,7 @@ export default function AppLayout() {
         <header className="hidden lg:flex sticky top-0 z-30 bg-background/80 backdrop-blur-md px-8 py-6 items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-text-muted uppercase tracking-widest">Overview</h2>
-            <p className="text-2xl font-bold text-text-dark">Welcome back, Soumen</p>
+            <p className="text-2xl font-bold text-text-dark">Welcome back{currentUser?.displayName ? `, ${currentUser.displayName.split(' ')[0]}` : ''}</p>
           </div>
           <div className="flex items-center space-x-4">
             <button 

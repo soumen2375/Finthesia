@@ -152,8 +152,8 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <div className="card p-6">
-              <div className="h-[250px] w-full min-h-0 min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[250px] w-full min-h-0 min-w-0 flex-1">
+                <ResponsiveContainer width="99%" height="99%">
                   <PieChart>
                     <Pie
                       data={spendingData}
@@ -192,8 +192,8 @@ export default function AnalyticsPage() {
           <section className="space-y-4">
             <h3 className="text-xl font-bold text-text-dark px-1">Income vs Spending</h3>
             <div className="card p-6">
-              <div className="h-[250px] w-full min-h-0 min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-[250px] w-full min-h-0 min-w-0 flex-1">
+                <ResponsiveContainer width="99%" height="99%">
                   <BarChart data={monthlyTrendData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis 
