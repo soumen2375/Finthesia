@@ -1,8 +1,33 @@
+# Dependencies
 node_modules/
-build/
+
+# Build output
 dist/
-coverage/
-.DS_Store
-*.log
-.env*
+build/
+
+# Environment & secrets
+.env
+.env.*
 !.env.example
+serviceAccountKey.json
+
+# Database
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Vite
+.vite/
+
+# Coverage
+coverage/
