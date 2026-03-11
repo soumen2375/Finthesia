@@ -297,6 +297,36 @@ if (!columns.includes('allow_manual_override')) {
   db.exec('ALTER TABLE cards ADD COLUMN allow_manual_override INTEGER DEFAULT 0');
 }
 
+// Migration: Add missing columns to liabilities table
+const liabInfo = db.pragma('table_info(liabilities)') as any[];
+const liabCols = liabInfo.map((col: any) => col.name);
+const liabMigrations: [string, string][] = [
+  ['provider', 'TEXT'],
+  ['liability_type', 'TEXT'],
+  ['credit_limit', 'DECIMAL(15,2)'],
+  ['tenure_months', 'INTEGER'],
+  ['remaining_months', 'INTEGER'],
+  ['property_value', 'DECIMAL(15,2)'],
+  ['moratorium_status', 'TEXT'],
+];
+liabMigrations.forEach(([col, dtype]) => {
+  if (!liabCols.includes(col)) {
+    db.exec(`ALTER TABLE liabilities ADD COLUMN ${col} ${dtype}`);
+  }
+});
+
+// Migration: Add subcategory to assets table
+const assetInfo = db.pragma('table_info(assets)') as any[];
+const assetCols = assetInfo.map((col: any) => col.name);
+if (!assetCols.includes('subcategory')) {
+  db.exec('ALTER TABLE assets ADD COLUMN subcategory TEXT');
+}
+
+// Migration: Add linked_card_id to liabilities table
+if (!liabCols.includes('linked_card_id')) {
+  db.exec('ALTER TABLE liabilities ADD COLUMN linked_card_id TEXT');
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -322,7 +352,7 @@ async function startServer() {
 
   app.post('/api/assets', authenticateUser, (req, res) => {
     try {
-      const { id, name, category, current_value, notes } = req.body;
+      const { id, name, category, current_value, notes, subcategory } = req.body;
       const err = firstError(
         validateString(id, 'id'),
         validateString(name, 'name'),
@@ -330,8 +360,8 @@ async function startServer() {
         validateNumber(current_value, 'current_value', { min: 0 })
       );
       if (err) return res.status(400).json({ error: err });
-      const stmt = db.prepare('INSERT INTO assets (id, user_id, name, category, current_value, notes) VALUES (?, ?, ?, ?, ?, ?)');
-      stmt.run(id, req.user?.uid, name.trim(), category.trim(), Number(current_value), notes || null);
+      const stmt = db.prepare('INSERT INTO assets (id, user_id, name, category, current_value, notes, subcategory) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      stmt.run(id, req.user?.uid, name.trim(), category.trim(), Number(current_value), notes || null, subcategory?.trim() || null);
       res.status(201).json({ success: true });
     } catch (error) {
       console.error('Failed to add asset:', error);
@@ -341,7 +371,7 @@ async function startServer() {
 
   app.put('/api/assets/:id', authenticateUser, (req, res) => {
     try {
-      const { name, category, current_value, notes } = req.body;
+      const { name, category, current_value, notes, subcategory } = req.body;
       const err = firstError(
         validateString(name, 'name'),
         validateString(category, 'category', 50),
@@ -349,8 +379,8 @@ async function startServer() {
       );
       if (err) return res.status(400).json({ error: err });
       const result = db.prepare(
-        'UPDATE assets SET name = ?, category = ?, current_value = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
-      ).run(name.trim(), category.trim(), Number(current_value), notes || null, req.params.id, req.user?.uid);
+        'UPDATE assets SET name = ?, category = ?, current_value = ?, notes = ?, subcategory = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
+      ).run(name.trim(), category.trim(), Number(current_value), notes || null, subcategory?.trim() || null, req.params.id, req.user?.uid);
       if (result.changes === 0) return res.status(404).json({ error: 'Asset not found or unauthorized' });
       res.json({ success: true });
     } catch (error) {
@@ -536,7 +566,7 @@ async function startServer() {
 
   app.post('/api/liabilities', authenticateUser, (req, res) => {
     try {
-      const { id, name, type, balance, interest_rate, minimum_payment, due_date } = req.body;
+      const { id, name, type, balance, interest_rate, minimum_payment, due_date, provider, liability_type, credit_limit, tenure_months, remaining_months, property_value, moratorium_status, linked_card_id } = req.body;
       const err = firstError(
         validateString(id, 'id'),
         validateString(name, 'name'),
@@ -546,8 +576,11 @@ async function startServer() {
         validateOptionalNumber(minimum_payment, 'minimum_payment', { min: 0 })
       );
       if (err) return res.status(400).json({ error: err });
-      const stmt = db.prepare('INSERT INTO liabilities (id, user_id, name, type, balance, interest_rate, minimum_payment, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-      stmt.run(id, req.user?.uid, name.trim(), type.trim(), Number(balance), interest_rate || null, minimum_payment || null, due_date || null);
+      const stmt = db.prepare(
+        `INSERT INTO liabilities (id, user_id, name, type, balance, interest_rate, minimum_payment, due_date, provider, liability_type, credit_limit, tenure_months, remaining_months, property_value, moratorium_status, linked_card_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      stmt.run(id, req.user?.uid, name.trim(), type.trim(), Number(balance), interest_rate || null, minimum_payment || null, due_date || null, provider?.trim() || null, liability_type || type.trim(), credit_limit || null, tenure_months || null, remaining_months || null, property_value || null, moratorium_status || null, linked_card_id || null);
       res.status(201).json({ success: true });
     } catch (error) {
       console.error('Failed to add liability:', error);
@@ -557,7 +590,7 @@ async function startServer() {
 
   app.put('/api/liabilities/:id', authenticateUser, (req, res) => {
     try {
-      const { name, type, balance, interest_rate, minimum_payment, due_date } = req.body;
+      const { name, type, balance, interest_rate, minimum_payment, due_date, provider, liability_type, credit_limit, tenure_months, remaining_months, property_value, moratorium_status, linked_card_id } = req.body;
       const err = firstError(
         validateString(name, 'name'),
         validateString(type, 'type', 50),
@@ -567,8 +600,9 @@ async function startServer() {
       );
       if (err) return res.status(400).json({ error: err });
       const result = db.prepare(
-        'UPDATE liabilities SET name = ?, type = ?, balance = ?, interest_rate = ?, minimum_payment = ?, due_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
-      ).run(name.trim(), type.trim(), Number(balance), interest_rate || null, minimum_payment || null, due_date || null, req.params.id, req.user?.uid);
+        `UPDATE liabilities SET name = ?, type = ?, balance = ?, interest_rate = ?, minimum_payment = ?, due_date = ?, provider = ?, liability_type = ?, credit_limit = ?, tenure_months = ?, remaining_months = ?, property_value = ?, moratorium_status = ?, linked_card_id = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`
+      ).run(name.trim(), type.trim(), Number(balance), interest_rate || null, minimum_payment || null, due_date || null, provider?.trim() || null, liability_type || type.trim(), credit_limit || null, tenure_months || null, remaining_months || null, property_value || null, moratorium_status || null, linked_card_id || null, req.params.id, req.user?.uid);
       if (result.changes === 0) return res.status(404).json({ error: 'Liability not found or unauthorized' });
       res.json({ success: true });
     } catch (error) {
@@ -584,6 +618,58 @@ async function startServer() {
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to delete liability:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // --- Debt Summary ---
+  app.get('/api/debt-summary', authenticateUser, (req, res) => {
+    try {
+      const uid = req.user?.uid;
+      const allLiabilities = db.prepare('SELECT * FROM liabilities WHERE user_id = ? ORDER BY balance DESC').all(uid) as any[];
+
+      const totalLiabilities = allLiabilities.reduce((s: number, l: any) => s + (Number(l.balance) || 0), 0);
+      const totalMonthlyPayments = allLiabilities.reduce((s: number, l: any) => s + (Number(l.minimum_payment) || 0), 0);
+
+      // Credit utilization
+      const creditCards = allLiabilities.filter((l: any) => l.type === 'credit_card' || l.liability_type === 'credit_card');
+      const totalCreditUsed = creditCards.reduce((s: number, l: any) => s + (Number(l.balance) || 0), 0);
+      const totalCreditLimit = creditCards.reduce((s: number, l: any) => s + (Number(l.credit_limit) || 0), 0);
+      const creditUtilization = totalCreditLimit > 0 ? Math.round((totalCreditUsed / totalCreditLimit) * 100) : 0;
+
+      // Category breakdown
+      const categories: Record<string, { total: number; count: number; monthly: number }> = {};
+      allLiabilities.forEach((l: any) => {
+        const cat = l.liability_type || l.type || 'other';
+        if (!categories[cat]) categories[cat] = { total: 0, count: 0, monthly: 0 };
+        categories[cat].total += Number(l.balance) || 0;
+        categories[cat].count++;
+        categories[cat].monthly += Number(l.minimum_payment) || 0;
+      });
+
+      // Get income for debt ratio
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const cutoff = threeMonthsAgo.toISOString().split('T')[0];
+      const income = db.prepare(
+        'SELECT COALESCE(SUM(amount), 0) as total FROM bank_transactions WHERE user_id = ? AND transaction_type = ? AND transaction_date >= ?'
+      ).get(uid, 'credit', cutoff) as any;
+      const monthlyIncome = (income?.total || 0) / 3;
+      const debtRatio = monthlyIncome > 0 ? Math.round((totalMonthlyPayments / monthlyIncome) * 100) : 0;
+
+      res.json({
+        total_liabilities: totalLiabilities,
+        total_monthly_payments: totalMonthlyPayments,
+        credit_utilization: creditUtilization,
+        total_credit_used: totalCreditUsed,
+        total_credit_limit: totalCreditLimit,
+        debt_ratio: debtRatio,
+        monthly_income: Math.round(monthlyIncome),
+        category_breakdown: categories,
+        liability_count: allLiabilities.length
+      });
+    } catch (error) {
+      console.error('Failed to fetch debt summary:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });

@@ -17,6 +17,8 @@ import BankTransactionsPage from './pages/BankTransactionsPage';
 import SubscriptionsPage from './pages/SubscriptionsPage';
 import FinancialHealthPage from './pages/FinancialHealthPage';
 import SpendingPredictionPage from './pages/SpendingPredictionPage';
+import LiabilitiesPage from './pages/LiabilitiesPage';
+import AssetsPage from './pages/AssetsPage';
 import AppLayout from './components/AppLayout';
 import { UIProvider } from './context/UIContext';
 import { ToastProvider } from './context/ToastContext';
@@ -41,6 +43,8 @@ export default function App() {
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/net-worth" element={<NetWorthPage />} />
                 <Route path="/cards" element={<CardsPage />} />
+                <Route path="/liabilities" element={<LiabilitiesPage />} />
+                <Route path="/assets" element={<AssetsPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/budgets" element={<BudgetsPage />} />
                 <Route path="/bills" element={<BillsPage />} />

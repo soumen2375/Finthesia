@@ -2,6 +2,7 @@ export interface Asset {
   id: string;
   name: string;
   category: string;
+  subcategory?: string;
   current_value: number;
   notes?: string;
   updated_at?: string;
@@ -58,6 +59,26 @@ export interface Liability {
   minimum_payment?: number;
   due_date?: string;
   updated_at?: string;
+  provider?: string;
+  liability_type?: string;
+  credit_limit?: number;
+  tenure_months?: number;
+  remaining_months?: number;
+  property_value?: number;
+  moratorium_status?: string;
+  linked_card_id?: string;
+}
+
+export interface DebtSummary {
+  total_liabilities: number;
+  total_monthly_payments: number;
+  credit_utilization: number;
+  total_credit_used: number;
+  total_credit_limit: number;
+  debt_ratio: number;
+  monthly_income: number;
+  category_breakdown: Record<string, { total: number; count: number; monthly: number }>;
+  liability_count: number;
 }
 
 export interface Transaction {
@@ -216,15 +237,19 @@ export const api = {
       body: JSON.stringify(liability),
     });
   },
-  async updateLiability(liability: Liability): Promise<void> {
-    await fetchWithAuth(`/api/liabilities/${liability.id}`, {
+  async updateLiability(id: string, data: Partial<Liability>): Promise<void> {
+    await fetchWithAuth(`/api/liabilities/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(liability),
+      body: JSON.stringify(data),
     });
   },
   async deleteLiability(id: string): Promise<void> {
     await fetchWithAuth(`/api/liabilities/${id}`, { method: 'DELETE' });
+  },
+  async getDebtSummary(): Promise<DebtSummary> {
+    const res = await fetchWithAuth('/api/debt-summary');
+    return res.json();
   },
   async getCards(): Promise<Card[]> {
     const res = await fetchWithAuth('/api/cards');
