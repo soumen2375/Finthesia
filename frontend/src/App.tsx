@@ -12,6 +12,11 @@ import SettingsPage from './pages/SettingsPage';
 import BudgetsPage from './pages/BudgetsPage';
 import BillsPage from './pages/BillsPage';
 import InsightsPage from './pages/InsightsPage';
+import BankAccountsPage from './pages/BankAccountsPage';
+import BankTransactionsPage from './pages/BankTransactionsPage';
+import SubscriptionsPage from './pages/SubscriptionsPage';
+import FinancialHealthPage from './pages/FinancialHealthPage';
+import SpendingPredictionPage from './pages/SpendingPredictionPage';
 import AppLayout from './components/AppLayout';
 import { UIProvider } from './context/UIContext';
 import { ToastProvider } from './context/ToastContext';
@@ -40,6 +45,11 @@ export default function App() {
                 <Route path="/budgets" element={<BudgetsPage />} />
                 <Route path="/bills" element={<BillsPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
+                <Route path="/banks" element={<BankAccountsPage />} />
+                <Route path="/banks/:bankId" element={<BankTransactionsPage />} />
+                <Route path="/subscriptions" element={<SubscriptionsPage />} />
+                <Route path="/financial-health" element={<FinancialHealthPage />} />
+                <Route path="/spending-predictions" element={<SpendingPredictionPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
               

@@ -16,7 +16,11 @@ import {
   User,
   Moon,
   Sun,
-  LogOut
+  LogOut,
+  Landmark,
+  RefreshCw,
+  Heart,
+  Brain
 } from 'lucide-react';
 import { useUI } from '../context/UIContext';
 import { useAuth } from '../context/AuthContext';
@@ -28,8 +32,12 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: TrendingUp, label: 'Net Worth', path: '/net-worth' },
   { icon: CreditCard, label: 'Cards', path: '/cards' },
+  { icon: Landmark, label: 'Bank Accounts', path: '/banks' },
   { icon: PieChart, label: 'Budgets', path: '/budgets' },
   { icon: Calendar, label: 'Bills & EMIs', path: '/bills' },
+  { icon: RefreshCw, label: 'Subscriptions', path: '/subscriptions' },
+  { icon: Heart, label: 'Financial Health', path: '/financial-health' },
+  { icon: Brain, label: 'Predictions', path: '/spending-predictions' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];

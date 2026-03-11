@@ -77,6 +77,96 @@ export interface NetWorthSummary {
   netWorth: number;
 }
 
+export interface BankAccount {
+  id: string;
+  user_id?: string;
+  bank_name: string;
+  account_type: 'savings' | 'current' | 'credit_card';
+  nickname?: string;
+  balance: number;
+  currency: string;
+  notes?: string;
+  bank_provider?: string;
+  provider_account_id?: string;
+  last_synced_at?: string;
+  sync_status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BankTransaction {
+  id: string;
+  user_id?: string;
+  bank_id: string;
+  amount: number;
+  merchant?: string;
+  category?: string;
+  transaction_date: string;
+  transaction_type: 'debit' | 'credit';
+  description?: string;
+  notes?: string;
+  source?: string;
+  csv_hash?: string;
+  created_at?: string;
+}
+
+export interface Subscription {
+  id: string;
+  name: string;
+  amount: number;
+  billing_cycle: string;
+  next_payment_date: string;
+  last_payment_date: string;
+  bank_id?: string;
+  month_count: number;
+  status: string;
+}
+
+export interface SubscriptionsResponse {
+  subscriptions: Subscription[];
+  total_monthly: number;
+  insight: string;
+}
+
+export interface CSVUploadResult {
+  success: boolean;
+  imported: number;
+  duplicates: number;
+  errors: string[];
+  total_rows: number;
+}
+
+export interface FinancialHealth {
+  score: number;
+  savings_rate: number;
+  savings_rate_status: string;
+  debt_ratio: number;
+  debt_ratio_status: string;
+  emergency_fund_ratio: number;
+  emergency_fund_status: string;
+  spending_discipline: number;
+  spending_discipline_status: string;
+  monthly_income: number;
+  monthly_expenses: number;
+  total_balance: number;
+}
+
+export interface CategoryPrediction {
+  category: string;
+  predicted_amount: number;
+  avg_per_transaction: number;
+  transaction_count: number;
+}
+
+export interface SpendingPrediction {
+  predicted_month: string;
+  predicted_total: number;
+  expected_savings: number;
+  monthly_income: number;
+  category_predictions: CategoryPrediction[];
+  data_months: number;
+}
+
 import { auth } from '../lib/firebase';
 
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
@@ -197,5 +287,62 @@ export const api = {
     await fetchWithAuth(`/api/cards/${id}`, {
       method: 'DELETE',
     });
-  }
+  },
+
+  // ---- Bank & Financial Intelligence Module ----
+  async getBanks(): Promise<BankAccount[]> {
+    const res = await fetchWithAuth('/api/banks');
+    return res.json();
+  },
+  async addBank(bank: Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; id: string }> {
+    const res = await fetchWithAuth('/api/banks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bank),
+    });
+    return res.json();
+  },
+  async updateBank(id: string, bank: Partial<BankAccount>): Promise<void> {
+    await fetchWithAuth(`/api/banks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bank),
+    });
+  },
+  async deleteBank(id: string): Promise<void> {
+    await fetchWithAuth(`/api/banks/${id}`, { method: 'DELETE' });
+  },
+  async getBankTransactions(bankId?: string): Promise<BankTransaction[]> {
+    const url = bankId ? `/api/bank-transactions?bank_id=${bankId}` : '/api/bank-transactions';
+    const res = await fetchWithAuth(url);
+    return res.json();
+  },
+  async addBankTransaction(tx: Omit<BankTransaction, 'id' | 'created_at'>): Promise<{ success: boolean; id: string }> {
+    const res = await fetchWithAuth('/api/bank-transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tx),
+    });
+    return res.json();
+  },
+  async uploadCSV(bankId: string, csvContent: string): Promise<CSVUploadResult> {
+    const res = await fetchWithAuth('/api/upload-csv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bank_id: bankId, csv_content: csvContent }),
+    });
+    return res.json();
+  },
+  async getSubscriptions(): Promise<SubscriptionsResponse> {
+    const res = await fetchWithAuth('/api/subscriptions');
+    return res.json();
+  },
+  async getFinancialHealth(): Promise<FinancialHealth> {
+    const res = await fetchWithAuth('/api/financial-health');
+    return res.json();
+  },
+  async getSpendingPredictions(): Promise<SpendingPrediction> {
+    const res = await fetchWithAuth('/api/spending-predictions');
+    return res.json();
+  },
 };
