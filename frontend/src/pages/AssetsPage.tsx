@@ -73,7 +73,16 @@ export default function AssetsPage() {
 
   useEffect(() => { fetchData(); }, [refreshKey]);
 
+  // Bank-injected assets (id starts with 'bank-asset-') are virtual — they
+  // are derived from the banks table and cannot be deleted here.
+  const isBankAsset = (id: string) => id.startsWith('bank-asset-');
+
   const handleDelete = async (id: string) => {
+    if (isBankAsset(id)) {
+      setDeleteConfirm(null);
+      showToast('This is a bank account balance. Go to Bank Accounts to manage it.', 'error');
+      return;
+    }
     try {
       await api.deleteAsset(id);
       setDeleteConfirm(null);
@@ -81,6 +90,7 @@ export default function AssetsPage() {
       fetchData();
     } catch (error) {
       console.error('Failed to delete:', error);
+      showToast('Failed to delete asset', 'error');
     }
   };
 
@@ -262,22 +272,33 @@ export default function AssetsPage() {
                               </div>
                               <div className="flex items-center space-x-4 shrink-0">
                                 <p className="text-xl font-bold text-text-dark">{formatCurrency(asset.current_value, isPrivacyMode)}</p>
-                                <div className="flex items-center space-x-1">
-                                  <button
-                                    onClick={() => { setEditingAsset(asset); setIsModalOpen(true); }}
-                                    className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-text-dark transition-colors"
-                                    title="Edit"
-                                  >
-                                    <Pencil size={14} />
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteConfirm(asset.id)}
-                                    className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-red-500 transition-colors"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
+                                 <div className="flex items-center space-x-1">
+                                   {isBankAsset(asset.id) ? (
+                                     <span
+                                       className="px-2 py-1.5 rounded-lg bg-background border border-border text-[9px] font-bold text-text-muted uppercase tracking-widest cursor-default select-none"
+                                       title="Managed via Bank Accounts"
+                                     >
+                                       Auto
+                                     </span>
+                                   ) : (
+                                     <>
+                                       <button
+                                         onClick={() => { setEditingAsset(asset); setIsModalOpen(true); }}
+                                         className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-text-dark transition-colors"
+                                         title="Edit"
+                                       >
+                                         <Pencil size={14} />
+                                       </button>
+                                       <button
+                                         onClick={() => setDeleteConfirm(asset.id)}
+                                         className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-red-500 transition-colors"
+                                         title="Delete"
+                                       >
+                                         <Trash2 size={14} />
+                                       </button>
+                                     </>
+                                   )}
+                                 </div>
                               </div>
                             </div>
                           </div>

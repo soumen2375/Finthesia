@@ -19,7 +19,7 @@ import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { motion, AnimatePresence } from 'motion/react';
-import { api, Card } from '../services/api';
+import { api, Card, Transaction } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { CardDetailsModal } from '../components/CardDetailsModal';
 import { formatCurrency } from '../lib/formatters';
@@ -64,6 +64,7 @@ export default function CardsPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [cardSpending, setCardSpending] = useState<Record<string, number>>({});
 
   // Form states
   const [selectedBank, setSelectedBank] = useState("");
@@ -79,6 +80,16 @@ export default function CardsPage() {
     try {
       const data = await api.getCards();
       setCards(data);
+      // Compute current month spending per card
+      const txs: Transaction[] = await api.getTransactions();
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const spending: Record<string, number> = {};
+      txs.forEach(tx => {
+        if (tx.card_id && (tx.type === 'spend' || tx.type === 'expense') && tx.transaction_date?.startsWith(currentMonth)) {
+          spending[tx.card_id] = (spending[tx.card_id] || 0) + Number(tx.amount);
+        }
+      });
+      setCardSpending(spending);
     } catch (error) {
       console.error('Failed to fetch cards', error);
     } finally {
@@ -430,6 +441,41 @@ export default function CardsPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Budget Tracking Bar */}
+                  {activeCard.monthly_budget && activeCard.monthly_budget > 0 && (() => {
+                    const spent = cardSpending[activeCard.id] || 0;
+                    const budget = activeCard.monthly_budget;
+                    const pct = Math.min(100, (spent / budget) * 100);
+                    const exceeded = spent > budget;
+                    return (
+                      <div className="space-y-3 pt-2 border-t border-border">
+                        <div className="flex justify-between items-end">
+                          <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Monthly Budget</p>
+                          <p className={cn(
+                            "text-sm font-bold px-2 py-0.5 rounded-lg",
+                            exceeded ? "bg-danger/10 text-danger" : "text-text-muted"
+                          )}>
+                            {formatCurrency(spent, isPrivacyMode)} / {formatCurrency(budget, isPrivacyMode)}
+                          </p>
+                        </div>
+                        <div className="h-4 w-full bg-background rounded-full overflow-hidden p-1 border border-border">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            className={cn(
+                              "h-full rounded-full transition-colors duration-500 shadow-sm",
+                              pct < 60 ? "bg-primary" :
+                              pct < 85 ? "bg-warning" : "bg-danger"
+                            )}
+                          />
+                        </div>
+                        {exceeded && (
+                          <p className="text-[10px] font-bold text-danger">⚠ Budget exceeded by {formatCurrency(spent - budget, false)}</p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div className="pt-2 flex justify-center">
                     <button 

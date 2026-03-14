@@ -137,6 +137,8 @@ db.exec(`
     transaction_date TEXT NOT NULL,
     type TEXT NOT NULL,
     card_id TEXT,
+    liability_id TEXT,
+    isActive INTEGER DEFAULT 1,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   
@@ -219,6 +221,16 @@ db.exec(`
     predicted_total DECIMAL(15,2),
     predicted_savings DECIMAL(15,2),
     category_predictions TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS net_worth_history (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    total_assets DECIMAL(15, 2) NOT NULL,
+    total_liabilities DECIMAL(15, 2) NOT NULL,
+    net_worth DECIMAL(15, 2) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
@@ -327,11 +339,35 @@ if (!liabCols.includes('linked_card_id')) {
   db.exec('ALTER TABLE liabilities ADD COLUMN linked_card_id TEXT');
 }
 
+// Migration: Add liability_id to transactions table
+const txInfo = db.pragma('table_info(transactions)') as any[];
+if (!txInfo.some(col => col.name === 'liability_id')) {
+  db.exec('ALTER TABLE transactions ADD COLUMN liability_id TEXT');
+}
+
+// Universal Soft Deletes Migration
+const TablesToMigrate = ['assets', 'liabilities', 'transactions', 'emis', 'banks', 'bank_transactions', 'subscriptions'];
+TablesToMigrate.forEach(table => {
+  const info = db.pragma(`table_info(${table})`) as any[];
+  if (!info.some(col => col.name === 'isActive')) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN isActive INTEGER DEFAULT 1`);
+  }
+});
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(cors());
+  app.use(cors({
+    origin: [
+      'https://finthesia-iota.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  }));
   app.use(express.json());
 
   // Health Check
@@ -342,8 +378,24 @@ async function startServer() {
   // API Routes
   app.get('/api/assets', authenticateUser, (req, res) => {
     try {
-      const assets = db.prepare('SELECT * FROM assets WHERE user_id = ? ORDER BY updated_at DESC').all(req.user?.uid);
-      res.json(assets);
+      const uid = req.user?.uid;
+      // 1. Get manual assets
+      const manualAssets = db.prepare('SELECT * FROM assets WHERE user_id = ? AND isActive = 1 ORDER BY updated_at DESC').all(uid) as any[];
+
+      // 2. Get bank balances and inject as assets
+      const banks = db.prepare('SELECT * FROM banks WHERE user_id = ? AND isActive = 1').all(uid) as any[];
+      const bankAssets = banks.map(bank => ({
+        id: `bank-asset-${bank.id}`,
+        user_id: uid,
+        name: `${bank.bank_name} - ${bank.nickname || bank.account_type}`,
+        category: 'bank_accounts',
+        subcategory: bank.account_type,
+        current_value: bank.balance,
+        notes: bank.notes,
+        updated_at: bank.updated_at
+      }));
+
+      res.json([...manualAssets, ...bankAssets]);
     } catch (error) {
       console.error('Failed to fetch assets:', error);
       res.status(500).json({ error: 'Internal Server Error' });
@@ -360,7 +412,7 @@ async function startServer() {
         validateNumber(current_value, 'current_value', { min: 0 })
       );
       if (err) return res.status(400).json({ error: err });
-      const stmt = db.prepare('INSERT INTO assets (id, user_id, name, category, current_value, notes, subcategory) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      const stmt = db.prepare('INSERT INTO assets (id, user_id, name, category, current_value, notes, subcategory, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, 1)');
       stmt.run(id, req.user?.uid, name.trim(), category.trim(), Number(current_value), notes || null, subcategory?.trim() || null);
       res.status(201).json({ success: true });
     } catch (error) {
@@ -391,7 +443,7 @@ async function startServer() {
 
   app.delete('/api/assets/:id', authenticateUser, (req, res) => {
     try {
-      const result = db.prepare('DELETE FROM assets WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
+      const result = db.prepare('UPDATE assets SET isActive = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
       if (result.changes === 0) return res.status(404).json({ error: 'Asset not found or unauthorized' });
       res.json({ success: true });
     } catch (error) {
@@ -412,9 +464,9 @@ async function startServer() {
 
   app.post('/api/cards', authenticateUser, (req, res) => {
     try {
-      const { 
-        id, bank_name, card_variant, name, card_type, 
-        credit_limit, available_credit, billing_cycle, 
+      const {
+        id, bank_name, card_variant, name, card_type,
+        credit_limit, available_credit, billing_cycle,
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee, joining_fee, reward_points, cashback_percent,
         monthly_budget, statement_generation_day, payment_due_day,
@@ -437,8 +489,8 @@ async function startServer() {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
       `);
       stmt.run(
-        id, req.user?.uid, bank_name, card_variant, name, card_type, 
-        credit_limit, available_credit, billing_cycle, 
+        id, req.user?.uid, bank_name, card_variant, name, card_type,
+        credit_limit, available_credit, billing_cycle,
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee || 0, joining_fee || 0, reward_points || 0, cashback_percent || 0,
         monthly_budget || 0, statement_generation_day, payment_due_day,
@@ -455,9 +507,9 @@ async function startServer() {
 
   app.put('/api/cards/:id', authenticateUser, (req, res) => {
     try {
-      const { 
-        bank_name, card_variant, name, card_type, 
-        credit_limit, available_credit, billing_cycle, 
+      const {
+        bank_name, card_variant, name, card_type,
+        credit_limit, available_credit, billing_cycle,
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee, joining_fee, reward_points, cashback_percent,
         monthly_budget, statement_generation_day, payment_due_day,
@@ -479,8 +531,8 @@ async function startServer() {
         WHERE id = ? AND user_id = ?
       `);
       const result = stmt.run(
-        bank_name, card_variant, name, card_type, 
-        credit_limit, available_credit, billing_cycle, 
+        bank_name, card_variant, name, card_type,
+        credit_limit, available_credit, billing_cycle,
         payment_due_date, total_amount_due, apr, last4, color,
         annual_fee || 0, joining_fee || 0, reward_points || 0, cashback_percent || 0,
         monthly_budget || 0, statement_generation_day, payment_due_day,
@@ -522,20 +574,29 @@ async function startServer() {
 
   app.post('/api/emis', authenticateUser, (req, res) => {
     try {
-      const { 
-        id, card_id, description, original_amount, 
-        remaining_amount, monthly_payment, remaining_months, next_due_date 
-      } = req.body;
-      const stmt = db.prepare(`
-        INSERT INTO emis (
-          id, user_id, card_id, description, original_amount, 
-          remaining_amount, monthly_payment, remaining_months, next_due_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(
-        id, req.user?.uid, card_id, description, original_amount, 
+      const {
+        id, card_id, description, original_amount,
         remaining_amount, monthly_payment, remaining_months, next_due_date
-      );
+      } = req.body;
+      const uid = req.user?.uid;
+      const val = Number(original_amount);
+
+      db.transaction(() => {
+        const stmt = db.prepare(`
+          INSERT INTO emis (
+            id, user_id, card_id, description, original_amount, 
+            remaining_amount, monthly_payment, remaining_months, next_due_date, isActive
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        `);
+        stmt.run(
+          id, uid, card_id, description, val,
+          remaining_amount, monthly_payment, remaining_months, next_due_date
+        );
+
+        // Block principal from card limit
+        db.prepare('UPDATE cards SET available_credit = available_credit - ? WHERE id = ? AND user_id = ?').run(val, card_id, uid);
+      })();
+
       res.status(201).json({ success: true });
     } catch (error) {
       console.error('Failed to add EMI:', error);
@@ -543,9 +604,36 @@ async function startServer() {
     }
   });
 
+  app.post('/api/emis/:id/foreclose', authenticateUser, (req, res) => {
+    try {
+      const uid = req.user?.uid;
+      const emi = db.prepare('SELECT * FROM emis WHERE id = ? AND user_id = ?').get(req.params.id, uid) as any;
+      if (!emi) return res.status(404).json({ error: 'EMI not found or unauthorized' });
+
+      db.transaction(() => {
+        // 1. Mark as inactive
+        db.prepare('UPDATE emis SET isActive = 0 WHERE id = ?').run(req.params.id);
+
+        // 2. Release blocked card limit
+        db.prepare('UPDATE cards SET available_credit = available_credit + ? WHERE id = ? AND user_id = ?').run(emi.remaining_amount, emi.card_id, uid);
+
+        // 3. Create expense transaction
+        const txId = generateId();
+        db.prepare('INSERT INTO transactions (id, user_id, amount, category, description, transaction_date, type, card_id, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)')
+          .run(txId, uid, emi.remaining_amount, 'EMI Foreclosure', `Foreclosure: ${emi.description}`, new Date().toISOString().split('T')[0], 'expense', emi.card_id);
+      })();
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to foreclose EMI:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
   app.delete('/api/emis/:id', authenticateUser, (req, res) => {
     try {
-      const result = db.prepare('DELETE FROM emis WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
+      const uid = req.user?.uid;
+      const result = db.prepare('UPDATE emis SET isActive = 0 WHERE id = ? AND user_id = ?').run(req.params.id, uid);
       if (result.changes === 0) return res.status(404).json({ error: 'EMI not found or unauthorized' });
       res.json({ success: true });
     } catch (error) {
@@ -556,8 +644,45 @@ async function startServer() {
 
   app.get('/api/liabilities', authenticateUser, (req, res) => {
     try {
-      const liabilities = db.prepare('SELECT * FROM liabilities WHERE user_id = ? ORDER BY updated_at DESC').all(req.user?.uid);
-      res.json(liabilities);
+      const uid = req.user?.uid;
+      // 1. Get manual liabilities
+      const manualLiabilities = db.prepare('SELECT * FROM liabilities WHERE user_id = ? AND isActive = 1 ORDER BY updated_at DESC').all(uid) as any[];
+
+      // 2. Get card utilization and inject as liabilities
+      const cards = db.prepare('SELECT * FROM cards WHERE user_id = ? AND isActive = 1').all(uid) as any[];
+
+      // Interest Compounding Simulation
+      const now = new Date();
+      manualLiabilities.forEach(l => {
+        if (l.apr > 0 && l.balance > 0) {
+          const lastUpdate = new Date(l.updated_at);
+          const diffMonths = (now.getFullYear() - lastUpdate.getFullYear()) * 12 + (now.getMonth() - lastUpdate.getMonth());
+          if (diffMonths >= 1) {
+            const interest = l.balance * (l.apr / 100 / 12) * diffMonths;
+            db.prepare('UPDATE liabilities SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(interest, l.id);
+            l.balance += interest;
+          }
+        }
+      });
+
+      const cardLiabilities = cards.map(card => {
+        const debt = Number(card.credit_limit) - Number(card.available_credit);
+        return {
+          id: `card-debt-${card.id}`,
+          user_id: uid,
+          name: `${card.bank_name} ${card.name}`,
+          type: 'credit_card',
+          liability_type: 'credit_card',
+          balance: debt,
+          provider: card.bank_name,
+          due_date: card.payment_due_date,
+          credit_limit: card.credit_limit,
+          linked_card_id: card.id,
+          updated_at: card.updated_at
+        };
+      }).filter(lib => lib.balance > 0);
+
+      res.json([...manualLiabilities, ...cardLiabilities]);
     } catch (error) {
       console.error('Failed to fetch liabilities:', error);
       res.status(500).json({ error: 'Internal Server Error' });
@@ -577,8 +702,8 @@ async function startServer() {
       );
       if (err) return res.status(400).json({ error: err });
       const stmt = db.prepare(
-        `INSERT INTO liabilities (id, user_id, name, type, balance, interest_rate, minimum_payment, due_date, provider, liability_type, credit_limit, tenure_months, remaining_months, property_value, moratorium_status, linked_card_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO liabilities (id, user_id, name, type, balance, interest_rate, minimum_payment, due_date, provider, liability_type, credit_limit, tenure_months, remaining_months, property_value, moratorium_status, linked_card_id, isActive)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`
       );
       stmt.run(id, req.user?.uid, name.trim(), type.trim(), Number(balance), interest_rate || null, minimum_payment || null, due_date || null, provider?.trim() || null, liability_type || type.trim(), credit_limit || null, tenure_months || null, remaining_months || null, property_value || null, moratorium_status || null, linked_card_id || null);
       res.status(201).json({ success: true });
@@ -613,7 +738,7 @@ async function startServer() {
 
   app.delete('/api/liabilities/:id', authenticateUser, (req, res) => {
     try {
-      const result = db.prepare('DELETE FROM liabilities WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
+      const result = db.prepare('UPDATE liabilities SET isActive = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
       if (result.changes === 0) return res.status(404).json({ error: 'Liability not found or unauthorized' });
       res.json({ success: true });
     } catch (error) {
@@ -626,7 +751,7 @@ async function startServer() {
   app.get('/api/debt-summary', authenticateUser, (req, res) => {
     try {
       const uid = req.user?.uid;
-      const allLiabilities = db.prepare('SELECT * FROM liabilities WHERE user_id = ? ORDER BY balance DESC').all(uid) as any[];
+      const allLiabilities = db.prepare('SELECT * FROM liabilities WHERE user_id = ? AND isActive = 1 ORDER BY balance DESC').all(uid) as any[];
 
       const totalLiabilities = allLiabilities.reduce((s: number, l: any) => s + (Number(l.balance) || 0), 0);
       const totalMonthlyPayments = allLiabilities.reduce((s: number, l: any) => s + (Number(l.minimum_payment) || 0), 0);
@@ -676,7 +801,7 @@ async function startServer() {
 
   app.get('/api/transactions', authenticateUser, (req, res) => {
     try {
-      const transactions = db.prepare('SELECT * FROM transactions WHERE user_id = ? ORDER BY transaction_date DESC').all(req.user?.uid);
+      const transactions = db.prepare('SELECT * FROM transactions WHERE user_id = ? AND isActive = 1 ORDER BY transaction_date DESC').all(req.user?.uid);
       res.json(transactions);
     } catch (error) {
       console.error('Failed to fetch transactions:', error);
@@ -686,7 +811,7 @@ async function startServer() {
 
   app.post('/api/transactions', authenticateUser, (req, res) => {
     try {
-      const { id, amount, category, description, transaction_date, type, card_id } = req.body;
+      const { id, amount, category, description, transaction_date, type, card_id, liability_id } = req.body;
       const validTypes = ['income', 'expense', 'payment', 'spend'];
       const err = firstError(
         validateString(id, 'id'),
@@ -697,8 +822,42 @@ async function startServer() {
       );
       if (err) return res.status(400).json({ error: err });
       if (!validTypes.includes(type)) return res.status(400).json({ error: `type must be one of: ${validTypes.join(', ')}` });
-      const stmt = db.prepare('INSERT INTO transactions (id, user_id, amount, category, description, transaction_date, type, card_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-      stmt.run(id, req.user?.uid, Number(amount), category.trim(), description || null, transaction_date.trim(), type.trim(), card_id || null);
+
+      const uid = req.user?.uid;
+      const val = Number(amount);
+
+      db.transaction(() => {
+        const stmt = db.prepare('INSERT INTO transactions (id, user_id, amount, category, description, transaction_date, type, card_id, liability_id, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)');
+        stmt.run(id, uid, val, category.trim(), description || null, transaction_date.trim(), type.trim(), card_id || null, liability_id || null);
+
+        // Synchronous Sync Logic
+        if (card_id && type === 'spend') {
+          db.prepare('UPDATE cards SET available_credit = available_credit - ? WHERE id = ? AND user_id = ?').run(val, card_id, uid);
+
+          // Reward Accrual
+          const card = db.prepare('SELECT cashback_percent FROM cards WHERE id = ?').get(card_id) as any;
+          if (card && card.cashback_percent > 0) {
+            const rewards = Math.round(val * (card.cashback_percent / 100));
+            if (rewards > 0) {
+              db.prepare('UPDATE cards SET reward_points = reward_points + ? WHERE id = ?').run(rewards, card_id);
+            }
+          }
+        } else if (liability_id && type === 'payment') {
+          db.prepare('UPDATE liabilities SET balance = balance - ? WHERE id = ?').run(val, liability_id);
+        } else if (!card_id && !liability_id) {
+          // Cash Sync
+          let cashAsset = db.prepare("SELECT id FROM assets WHERE user_id = ? AND category = 'bank_accounts' AND subcategory = 'Cash Wallet' AND isActive = 1").get(uid) as any;
+          if (!cashAsset) {
+            const assetId = generateId();
+            db.prepare("INSERT INTO assets (id, user_id, name, category, subcategory, current_value, isActive) VALUES (?, ?, ?, ?, ?, ?, 1)")
+              .run(assetId, uid, 'Cash Wallet', 'bank_accounts', 'Cash Wallet', 0);
+            cashAsset = { id: assetId };
+          }
+          const adjustment = type === 'income' ? val : -val;
+          db.prepare('UPDATE assets SET current_value = current_value + ? WHERE id = ?').run(adjustment, cashAsset.id);
+        }
+      })();
+
       res.status(201).json({ success: true });
     } catch (error) {
       console.error('Failed to add transaction:', error);
@@ -708,20 +867,52 @@ async function startServer() {
 
   app.put('/api/transactions/:id', authenticateUser, (req, res) => {
     try {
-      const { amount, category, description, transaction_date, type, card_id } = req.body;
-      const validTypes = ['income', 'expense', 'payment', 'spend'];
-      const err = firstError(
-        validateNumber(amount, 'amount', { min: 0 }),
-        validateString(category, 'category', 100),
-        validateString(transaction_date, 'transaction_date'),
-        validateString(type, 'type', 20)
-      );
-      if (err) return res.status(400).json({ error: err });
-      if (!validTypes.includes(type)) return res.status(400).json({ error: `type must be one of: ${validTypes.join(', ')}` });
-      const result = db.prepare(
-        'UPDATE transactions SET amount = ?, category = ?, description = ?, transaction_date = ?, type = ?, card_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
-      ).run(Number(amount), category.trim(), description || null, transaction_date.trim(), type.trim(), card_id || null, req.params.id, req.user?.uid);
-      if (result.changes === 0) return res.status(404).json({ error: 'Transaction not found or unauthorized' });
+      const { amount, category, description, transaction_date, type, card_id, liability_id } = req.body;
+      const uid = req.user?.uid;
+      const oldTx = db.prepare('SELECT * FROM transactions WHERE id = ? AND user_id = ?').get(req.params.id, uid) as any;
+      if (!oldTx) return res.status(404).json({ error: 'Transaction not found or unauthorized' });
+
+      db.transaction(() => {
+        // 1. Reverse old sync
+        const oldVal = Number(oldTx.amount);
+        if (oldTx.card_id && oldTx.type === 'spend') {
+          db.prepare('UPDATE cards SET available_credit = available_credit + ? WHERE id = ? AND user_id = ?').run(oldVal, oldTx.card_id, uid);
+        } else if (oldTx.liability_id && oldTx.type === 'payment') {
+          db.prepare('UPDATE liabilities SET balance = balance + ? WHERE id = ?').run(oldVal, oldTx.liability_id);
+        } else if (!oldTx.card_id && !oldTx.liability_id) {
+          const cashAsset = db.prepare("SELECT id FROM assets WHERE user_id = ? AND category = 'bank_accounts' AND subcategory = 'Cash Wallet' AND isActive = 1").get(uid) as any;
+          if (cashAsset) {
+            const adj = oldTx.type === 'income' ? -oldVal : oldVal;
+            db.prepare('UPDATE assets SET current_value = current_value + ? WHERE id = ?').run(adj, cashAsset.id);
+          }
+        }
+
+        // 2. Apply new sync
+        const newVal = Number(amount);
+        if (card_id && type === 'spend') {
+          db.prepare('UPDATE cards SET available_credit = available_credit - ? WHERE id = ? AND user_id = ?').run(newVal, card_id, uid);
+        } else if (liability_id && type === 'payment') {
+          db.prepare('UPDATE liabilities SET balance = balance - ? WHERE id = ?').run(newVal, liability_id);
+        } else if (!card_id && !liability_id) {
+          let cashAsset = db.prepare("SELECT id FROM assets WHERE user_id = ? AND category = 'bank_accounts' AND subcategory = 'Cash Wallet' AND isActive = 1").get(uid) as any;
+          if (!cashAsset && newVal !== 0) {
+            const assetId = generateId();
+            db.prepare("INSERT INTO assets (id, user_id, name, category, subcategory, current_value, isActive) VALUES (?, ?, ?, ?, ?, ?, 1)")
+              .run(assetId, uid, 'Cash Wallet', 'bank_accounts', 'Cash Wallet', 0);
+            cashAsset = { id: assetId };
+          }
+          if (cashAsset) {
+            const adj = type === 'income' ? newVal : -newVal;
+            db.prepare('UPDATE assets SET current_value = current_value + ? WHERE id = ?').run(adj, cashAsset.id);
+          }
+        }
+
+        // 3. Update record
+        db.prepare(
+          'UPDATE transactions SET amount = ?, category = ?, description = ?, transaction_date = ?, type = ?, card_id = ?, liability_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
+        ).run(newVal, category?.trim(), description || null, transaction_date?.trim(), type, card_id || null, liability_id || null, req.params.id, uid);
+      })();
+
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to update transaction:', error);
@@ -731,8 +922,28 @@ async function startServer() {
 
   app.delete('/api/transactions/:id', authenticateUser, (req, res) => {
     try {
-      const result = db.prepare('DELETE FROM transactions WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
-      if (result.changes === 0) return res.status(404).json({ error: 'Transaction not found or unauthorized' });
+      const uid = req.user?.uid;
+      const tx = db.prepare('SELECT * FROM transactions WHERE id = ? AND user_id = ?').get(req.params.id, uid) as any;
+      if (!tx) return res.status(404).json({ error: 'Transaction not found or unauthorized' });
+
+      db.transaction(() => {
+        db.prepare('UPDATE transactions SET isActive = 0 WHERE id = ?').run(req.params.id);
+
+        // Reverse Sync Logic
+        const val = Number(tx.amount);
+        if (tx.card_id && tx.type === 'spend') {
+          db.prepare('UPDATE cards SET available_credit = available_credit + ? WHERE id = ? AND user_id = ?').run(val, tx.card_id, uid);
+        } else if (tx.liability_id && tx.type === 'payment') {
+          db.prepare('UPDATE liabilities SET balance = balance + ? WHERE id = ?').run(val, tx.liability_id);
+        } else if (!tx.card_id && !tx.liability_id) {
+          const cashAsset = db.prepare("SELECT id FROM assets WHERE user_id = ? AND category = 'bank_accounts' AND subcategory = 'Cash Wallet' AND isActive = 1").get(uid) as any;
+          if (cashAsset) {
+            const adjustment = tx.type === 'income' ? -val : val;
+            db.prepare('UPDATE assets SET current_value = current_value + ? WHERE id = ?').run(adjustment, cashAsset.id);
+          }
+        }
+      })();
+
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to delete transaction:', error);
@@ -740,15 +951,55 @@ async function startServer() {
     }
   });
 
+  // --- Snapshot Architecture ---
+  function recordUserSnapshot(uid: string | undefined) {
+    if (!uid) return;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const existing = db.prepare('SELECT id FROM net_worth_history WHERE user_id = ? AND date = ?').get(uid, today);
+      if (existing) return;
+
+      const assetsTotal = db.prepare('SELECT SUM(current_value) as total FROM assets WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const bankTotal = db.prepare('SELECT SUM(balance) as total FROM banks WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const liabilitiesTotal = db.prepare('SELECT SUM(balance) as total FROM liabilities WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const cardsTotal = db.prepare('SELECT SUM(credit_limit - available_credit) as total FROM cards WHERE isActive = 1 AND user_id = ?').get(uid) as any;
+
+      const totalAssets = (assetsTotal.total || 0) + (bankTotal.total || 0);
+      const totalLiabilities = (liabilitiesTotal.total || 0) + (cardsTotal.total || 0);
+      const netWorth = totalAssets - totalLiabilities;
+
+      db.prepare('INSERT INTO net_worth_history (id, user_id, date, total_assets, total_liabilities, net_worth) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(generateId(), uid, today, totalAssets, totalLiabilities, netWorth);
+    } catch (e) {
+      console.error('Snapshot failed for user:', uid, e);
+    }
+  }
+
+  app.get('/api/net-worth/history', authenticateUser, (req, res) => {
+    try {
+      const uid = req.user?.uid;
+      // Auto-snapshot for today if missing
+      recordUserSnapshot(uid);
+
+      const history = db.prepare('SELECT * FROM net_worth_history WHERE user_id = ? ORDER BY date ASC').all(uid);
+      res.json(history);
+    } catch (error) {
+      console.error('Failed to fetch net worth history:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
   app.get('/api/net-worth', authenticateUser, (req, res) => {
     try {
-      const assetsTotal = db.prepare('SELECT SUM(current_value) as total FROM assets WHERE user_id = ?').get(req.user?.uid) as any;
-      const liabilitiesTotal = db.prepare('SELECT SUM(balance) as total FROM liabilities WHERE user_id = ?').get(req.user?.uid) as any;
-      const cardsTotal = db.prepare('SELECT SUM(credit_limit - available_credit) as total FROM cards WHERE isActive = 1 AND user_id = ?').get(req.user?.uid) as any;
-      
-      const totalAssets = assetsTotal.total || 0;
+      const uid = req.user?.uid;
+      const assetsTotal = db.prepare('SELECT SUM(current_value) as total FROM assets WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const bankTotal = db.prepare('SELECT SUM(balance) as total FROM banks WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const liabilitiesTotal = db.prepare('SELECT SUM(balance) as total FROM liabilities WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const cardsTotal = db.prepare('SELECT SUM(credit_limit - available_credit) as total FROM cards WHERE isActive = 1 AND user_id = ?').get(uid) as any;
+
+      const totalAssets = (assetsTotal.total || 0) + (bankTotal.total || 0);
       const totalLiabilities = (liabilitiesTotal.total || 0) + (cardsTotal.total || 0);
-      
+
       res.json({
         totalAssets,
         totalLiabilities,
@@ -797,7 +1048,7 @@ async function startServer() {
   // --- Banks CRUD ---
   app.get('/api/banks', authenticateUser, (req, res) => {
     try {
-      const banks = db.prepare('SELECT * FROM banks WHERE user_id = ? ORDER BY updated_at DESC').all(req.user?.uid);
+      const banks = db.prepare('SELECT * FROM banks WHERE user_id = ? AND isActive = 1 ORDER BY updated_at DESC').all(req.user?.uid);
       res.json(banks);
     } catch (error) {
       console.error('Failed to fetch banks:', error);
@@ -864,11 +1115,12 @@ async function startServer() {
   app.get('/api/bank-transactions', authenticateUser, (req, res) => {
     try {
       const { bank_id } = req.query;
+      const uid = req.user?.uid;
       let transactions;
       if (bank_id) {
-        transactions = db.prepare('SELECT * FROM bank_transactions WHERE user_id = ? AND bank_id = ? ORDER BY transaction_date DESC').all(req.user?.uid, bank_id);
+        transactions = db.prepare('SELECT * FROM bank_transactions WHERE user_id = ? AND bank_id = ? AND isActive = 1 ORDER BY transaction_date DESC').all(uid, bank_id);
       } else {
-        transactions = db.prepare('SELECT * FROM bank_transactions WHERE user_id = ? ORDER BY transaction_date DESC').all(req.user?.uid);
+        transactions = db.prepare('SELECT * FROM bank_transactions WHERE user_id = ? AND isActive = 1 ORDER BY transaction_date DESC').all(uid);
       }
       res.json(transactions);
     } catch (error) {
@@ -887,22 +1139,87 @@ async function startServer() {
         validateString(transaction_type, 'transaction_type', 10)
       );
       if (err) return res.status(400).json({ error: err });
-      const validTypes = ['debit', 'credit'];
-      if (!validTypes.includes(transaction_type)) return res.status(400).json({ error: `transaction_type must be one of: ${validTypes.join(', ')}` });
+      if (!['debit', 'credit'].includes(transaction_type)) return res.status(400).json({ error: 'Invalid transaction_type' });
+
+      const uid = req.user?.uid;
+      const val = Math.abs(Number(amount));
       const id = generateId();
       const detectedCategory = category || detectCategory(description || merchant || '');
-      db.prepare(
-        'INSERT INTO bank_transactions (id, user_id, bank_id, amount, merchant, category, transaction_date, transaction_type, description, notes, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(id, req.user?.uid, bank_id, Math.abs(Number(amount)), merchant?.trim() || null, detectedCategory, transaction_date, transaction_type, description?.trim() || null, notes?.trim() || null, 'manual');
-      // Update bank balance
-      if (transaction_type === 'credit') {
-        db.prepare('UPDATE banks SET balance = balance + ? WHERE id = ? AND user_id = ?').run(Math.abs(Number(amount)), bank_id, req.user?.uid);
-      } else {
-        db.prepare('UPDATE banks SET balance = balance - ? WHERE id = ? AND user_id = ?').run(Math.abs(Number(amount)), bank_id, req.user?.uid);
-      }
+
+      db.transaction(() => {
+        db.prepare(
+          'INSERT INTO bank_transactions (id, user_id, bank_id, amount, merchant, category, transaction_date, transaction_type, description, notes, source, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
+        ).run(id, uid, bank_id, val, merchant?.trim() || null, detectedCategory, transaction_date, transaction_type, description?.trim() || null, notes?.trim() || null, 'manual');
+
+        const adjustment = transaction_type === 'credit' ? val : -val;
+        db.prepare('UPDATE banks SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(adjustment, bank_id, uid);
+      })();
+
       res.status(201).json({ success: true, id });
     } catch (error) {
       console.error('Failed to add bank transaction:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.put('/api/bank-transactions/:id', authenticateUser, (req, res) => {
+    try {
+      const uid = req.user?.uid;
+      const oldTx = db.prepare('SELECT * FROM bank_transactions WHERE id = ? AND user_id = ?').get(req.params.id, uid) as any;
+      if (!oldTx) return res.status(404).json({ error: 'Bank transaction not found or unauthorized' });
+
+      const { amount, merchant, category, transaction_date, transaction_type, description, notes } = req.body;
+      const err = firstError(
+        validateNumber(amount, 'amount'),
+        validateString(transaction_date, 'transaction_date'),
+        validateString(transaction_type, 'transaction_type', 10)
+      );
+      if (err) return res.status(400).json({ error: err });
+      if (!['debit', 'credit'].includes(transaction_type)) return res.status(400).json({ error: 'Invalid transaction_type' });
+
+      const newVal = Math.abs(Number(amount));
+      const oldVal = Math.abs(Number(oldTx.amount));
+
+      db.transaction(() => {
+        // 1. Reverse old balance effect
+        const oldAdj = oldTx.transaction_type === 'credit' ? -oldVal : oldVal;
+        db.prepare('UPDATE banks SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(oldAdj, oldTx.bank_id, uid);
+
+        // 2. Apply new balance effect
+        const newAdj = transaction_type === 'credit' ? newVal : -newVal;
+        db.prepare('UPDATE banks SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(newAdj, oldTx.bank_id, uid);
+
+        // 3. Update the record
+        const detectedCategory = category || detectCategory(description || merchant || '');
+        db.prepare(
+          'UPDATE bank_transactions SET amount = ?, merchant = ?, category = ?, transaction_date = ?, transaction_type = ?, description = ?, notes = ? WHERE id = ? AND user_id = ?'
+        ).run(newVal, merchant?.trim() || null, detectedCategory, transaction_date, transaction_type, description?.trim() || null, notes?.trim() || null, req.params.id, uid);
+      })();
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to update bank transaction:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.delete('/api/bank-transactions/:id', authenticateUser, (req, res) => {
+    try {
+      const uid = req.user?.uid;
+      const tx = db.prepare('SELECT * FROM bank_transactions WHERE id = ? AND user_id = ?').get(req.params.id, uid) as any;
+      if (!tx) return res.status(404).json({ error: 'Bank transaction not found or unauthorized' });
+
+      db.transaction(() => {
+        db.prepare('UPDATE bank_transactions SET isActive = 0 WHERE id = ?').run(req.params.id);
+
+        const val = Number(tx.amount);
+        const adjustment = tx.transaction_type === 'credit' ? -val : val;
+        db.prepare('UPDATE banks SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(adjustment, tx.bank_id, uid);
+      })();
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete bank transaction:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
@@ -1018,10 +1335,44 @@ async function startServer() {
     }
   });
 
-  // --- Smart Subscription Detection ---
+  // --- Subscriptions (Manual CRUD + Auto-detection) ---
+  app.post('/api/subscriptions', authenticateUser, (req, res) => {
+    try {
+      const { name, amount, billing_cycle, next_payment_date, bank_id } = req.body;
+      const err = firstError(
+        validateString(name, 'name'),
+        validateNumber(amount, 'amount', { min: 0 })
+      );
+      if (err) return res.status(400).json({ error: err });
+      const id = generateId();
+      db.prepare(
+        'INSERT INTO subscriptions (id, user_id, name, amount, billing_cycle, next_payment_date, bank_id, status, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)'
+      ).run(id, req.user?.uid, name.trim(), Number(amount), billing_cycle || 'monthly', next_payment_date || null, bank_id || null, 'active');
+      res.status(201).json({ success: true, id });
+    } catch (error) {
+      console.error('Failed to add subscription:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  app.delete('/api/subscriptions/:id', authenticateUser, (req, res) => {
+    try {
+      const result = db.prepare('UPDATE subscriptions SET isActive = 0 WHERE id = ? AND user_id = ?').run(req.params.id, req.user?.uid);
+      if (result.changes === 0) return res.status(404).json({ error: 'Subscription not found or unauthorized' });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete subscription:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
   app.get('/api/subscriptions', authenticateUser, (req, res) => {
     try {
-      // Detect recurring payments: same merchant, same amount, appearing in 2+ different months
+      const uid = req.user?.uid;
+      // 1. Get manual subscriptions
+      const manualSubs = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND isActive = 1').all(uid) as any[];
+
+      // 2. Detect recurring payments from bank transactions
       const recurring = db.prepare(`
         SELECT 
           merchant as name,
@@ -1030,20 +1381,19 @@ async function startServer() {
           MAX(transaction_date) as last_payment,
           bank_id
         FROM bank_transactions
-        WHERE user_id = ? AND transaction_type = 'debit' AND merchant IS NOT NULL AND merchant != ''
+        WHERE user_id = ? AND transaction_type = 'debit' AND merchant IS NOT NULL AND merchant != '' AND isActive = 1
         GROUP BY merchant, amount
         HAVING month_count >= 2
         ORDER BY amount DESC
-      `).all(req.user?.uid) as any[];
+      `).all(uid) as any[];
 
-      const subscriptions = recurring.map((sub: any) => {
-        // Estimate next payment: add 1 month to last payment
+      const detectedSubs = recurring.map((sub: any) => {
         const lastPayment = new Date(sub.last_payment);
         const nextPayment = new Date(lastPayment);
         nextPayment.setMonth(nextPayment.getMonth() + 1);
 
         return {
-          id: generateCsvHash(sub.name, sub.amount.toString(), 'sub'),
+          id: `auto-sub-${generateCsvHash(sub.name, sub.amount.toString(), 'sub')}`,
           name: sub.name,
           amount: sub.amount,
           billing_cycle: 'monthly',
@@ -1051,19 +1401,28 @@ async function startServer() {
           last_payment_date: sub.last_payment,
           bank_id: sub.bank_id,
           month_count: sub.month_count,
-          status: 'active'
+          status: 'active',
+          source: 'auto'
         };
       });
 
-      const totalMonthly = subscriptions.reduce((sum: number, s: any) => sum + s.amount, 0);
+      // Merge and deduplicate (favor manual)
+      const mergedSubs = [...manualSubs.map(s => ({ ...s, source: 'manual' }))];
+      detectedSubs.forEach(d => {
+        if (!mergedSubs.some(m => m.name.toLowerCase() === d.name.toLowerCase())) {
+          mergedSubs.push(d);
+        }
+      });
+
+      const totalMonthly = mergedSubs.reduce((sum: number, s: any) => sum + s.amount, 0);
 
       res.json({
-        subscriptions,
+        subscriptions: mergedSubs,
         total_monthly: totalMonthly,
         insight: `You spend ₹${totalMonthly.toLocaleString('en-IN')}/month on subscriptions.`
       });
     } catch (error) {
-      console.error('Failed to detect subscriptions:', error);
+      console.error('Failed to fetch subscriptions:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
@@ -1078,24 +1437,33 @@ async function startServer() {
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       const cutoff = threeMonthsAgo.toISOString().split('T')[0];
 
-      const credits = db.prepare(
-        'SELECT COALESCE(SUM(amount), 0) as total FROM bank_transactions WHERE user_id = ? AND transaction_type = ? AND transaction_date >= ?'
-      ).get(uid, 'credit', cutoff) as any;
+      const credits = db.prepare(`
+        SELECT COALESCE(SUM(amount), 0) as total FROM (
+          SELECT amount FROM bank_transactions WHERE user_id = ? AND transaction_type = 'credit' AND transaction_date >= ? AND category != 'Transfer' AND isActive = 1
+          UNION ALL
+          SELECT amount FROM transactions WHERE user_id = ? AND type = 'income' AND transaction_date >= ? AND category != 'Transfer' AND isActive = 1
+        )
+      `).get(uid, cutoff, uid, cutoff) as any;
 
-      const debits = db.prepare(
-        'SELECT COALESCE(SUM(amount), 0) as total FROM bank_transactions WHERE user_id = ? AND transaction_type = ? AND transaction_date >= ?'
-      ).get(uid, 'debit', cutoff) as any;
+      const debits = db.prepare(`
+        SELECT COALESCE(SUM(amount), 0) as total FROM (
+          SELECT amount FROM bank_transactions WHERE user_id = ? AND transaction_type = 'debit' AND transaction_date >= ? AND category != 'Transfer' AND isActive = 1
+          UNION ALL
+          SELECT amount FROM transactions WHERE user_id = ? AND (type = 'expense' OR type = 'spend') AND transaction_date >= ? AND category != 'Transfer' AND isActive = 1
+        )
+      `).get(uid, cutoff, uid, cutoff) as any;
 
       const totalIncome = credits.total || 0;
       const totalExpenses = debits.total || 0;
 
       // Get total bank balances (emergency fund)
-      const bankBalances = db.prepare('SELECT COALESCE(SUM(balance), 0) as total FROM banks WHERE user_id = ?').get(uid) as any;
+      const bankBalances = db.prepare('SELECT COALESCE(SUM(balance), 0) as total FROM banks WHERE user_id = ? AND isActive = 1').get(uid) as any;
       const totalBalance = bankBalances.total || 0;
 
-      // Get total liabilities from existing table
-      const liabilities = db.prepare('SELECT COALESCE(SUM(balance), 0) as total FROM liabilities WHERE user_id = ?').get(uid) as any;
-      const totalDebt = liabilities.total || 0;
+      // Get total liabilities (SSOT: manual + card debt)
+      const liabilitiesTotal = db.prepare('SELECT SUM(balance) as total FROM liabilities WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const cardsTotal = db.prepare('SELECT SUM(credit_limit - available_credit) as total FROM cards WHERE isActive = 1 AND user_id = ?').get(uid) as any;
+      const totalDebt = (liabilitiesTotal.total || 0) + (cardsTotal.total || 0);
 
       // Monthly income/expenses (averaged over 3 months)
       const monthlyIncome = totalIncome / 3;
@@ -1185,20 +1553,26 @@ async function startServer() {
           SUM(amount) as total,
           AVG(amount) as avg_per_tx,
           COUNT(*) as tx_count
-        FROM bank_transactions
-        WHERE user_id = ? AND transaction_type = 'debit' AND transaction_date >= ?
+        FROM (
+          SELECT category, transaction_date, amount FROM bank_transactions WHERE user_id = ? AND transaction_type = 'debit' AND transaction_date >= ? AND category != 'Transfer' AND isActive = 1
+          UNION ALL
+          SELECT category, transaction_date, amount FROM transactions WHERE user_id = ? AND (type = 'expense' OR type = 'spend') AND transaction_date >= ? AND category != 'Transfer' AND isActive = 1
+        )
         GROUP BY category
         ORDER BY total DESC
-      `).all(uid, cutoff) as any[];
+      `).all(uid, cutoff, uid, cutoff) as any[];
 
       // Get total income for last 6 months
       const incomeData = db.prepare(`
         SELECT 
           COUNT(DISTINCT strftime('%Y-%m', transaction_date)) as months,
           SUM(amount) as total
-        FROM bank_transactions
-        WHERE user_id = ? AND transaction_type = 'credit' AND transaction_date >= ?
-      `).get(uid, cutoff) as any;
+        FROM (
+          SELECT transaction_date, amount FROM bank_transactions WHERE user_id = ? AND transaction_type = 'credit' AND transaction_date >= ? AND category != 'Transfer' AND isActive = 1
+          UNION ALL
+          SELECT transaction_date, amount FROM transactions WHERE user_id = ? AND type = 'income' AND transaction_date >= ? AND category != 'Transfer' AND isActive = 1
+        )
+      `).get(uid, cutoff, uid, cutoff) as any;
 
       const incomeMonths = incomeData?.months || 1;
       const monthlyIncome = (incomeData?.total || 0) / Math.max(1, incomeMonths);
@@ -1232,6 +1606,52 @@ async function startServer() {
       });
     } catch (error) {
       console.error('Failed to generate spending predictions:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // --- Safe to Spend ---
+  app.get('/api/safe-to-spend', authenticateUser, (req, res) => {
+    try {
+      const uid = req.user?.uid;
+
+      // 1. Average Monthly Income (3 months)
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const cutoff = threeMonthsAgo.toISOString().split('T')[0];
+      const incomeData = db.prepare(`
+        SELECT COALESCE(SUM(amount), 0) as total FROM (
+          SELECT amount FROM bank_transactions WHERE user_id = ? AND transaction_type = 'credit' AND transaction_date >= ? AND isActive = 1
+          UNION ALL
+          SELECT amount FROM transactions WHERE user_id = ? AND type = 'income' AND transaction_date >= ? AND isActive = 1
+        )
+      `).get(uid, cutoff, uid, cutoff) as any;
+      const avgMonthlyIncome = (incomeData.total || 0) / 3;
+
+      // 2. Fixed Obligations
+      // Subscriptions
+      const subs = db.prepare('SELECT SUM(amount) as total FROM subscriptions WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const monthlySubs = subs.total || 0;
+
+      // EMIs
+      const emis = db.prepare('SELECT SUM(monthly_payment) as total FROM emis WHERE user_id = ? AND isActive = 1').get(uid) as any;
+      const monthlyEmis = emis.total || 0;
+
+      // 3. Calculation
+      const mandatorySavings = avgMonthlyIncome * 0.20;
+      const remainingBalance = avgMonthlyIncome - monthlySubs - monthlyEmis - mandatorySavings;
+      const safeToSpendDaily = Math.max(0, remainingBalance / 30);
+
+      res.json({
+        monthly_income: Math.round(avgMonthlyIncome),
+        monthly_subscriptions: monthlySubs,
+        monthly_emis: monthlyEmis,
+        mandatory_savings: Math.round(mandatorySavings),
+        disposable_monthly: Math.round(remainingBalance),
+        safe_to_spend_daily: Math.round(safeToSpendDaily)
+      });
+    } catch (error) {
+      console.error('Failed to calculate safe to spend:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });

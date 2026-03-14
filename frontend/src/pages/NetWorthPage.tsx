@@ -11,7 +11,7 @@ import {
   LineChart as LineChartIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { api, Asset, Liability } from '../services/api';
+import { api, Asset, Liability, NetWorthHistory } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { formatCurrency, formatCurrencyCompact } from '../lib/formatters';
 import { 
@@ -51,17 +51,20 @@ export default function NetWorthPage() {
   const { isPrivacyMode, refreshKey } = useUI();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
+  const [history, setHistory] = useState<NetWorthHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [assetsData, liabilitiesData] = await Promise.all([
+      const [assetsData, liabilitiesData, historyData] = await Promise.all([
         api.getAssets(),
-        api.getLiabilities()
+        api.getLiabilities(),
+        api.getNetWorthHistory(),
       ]);
       setAssets(assetsData);
       setLiabilities(liabilitiesData);
+      setHistory(historyData);
     } catch (error) {
       console.error('Failed to fetch data', error);
     } finally {
@@ -111,15 +114,21 @@ export default function NetWorthPage() {
     })).filter(d => d.value > 0);
   }, [assets]);
 
-  // Mock growth data
-  const growthData = [
-    { name: 'Oct', value: netWorth * 0.85 },
-    { name: 'Nov', value: netWorth * 0.92 },
-    { name: 'Dec', value: netWorth * 0.88 },
-    { name: 'Jan', value: netWorth * 0.95 },
-    { name: 'Feb', value: netWorth * 0.98 },
-    { name: 'Mar', value: netWorth },
-  ];
+  // Real net worth history for the growth chart
+  const growthData = history.map(h => ({
+    name: new Date(h.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+    value: Number(h.net_worth),
+  }));
+
+  // Compute real percentage change
+  const realChangePercent = useMemo(() => {
+    if (history.length < 2) return null;
+    const first = Number(history[0].net_worth);
+    const last = Number(history[history.length - 1].net_worth);
+    if (first === 0) return null;
+    return (((last - first) / Math.abs(first)) * 100).toFixed(1);
+  }, [history]);
+  const changePositive = realChangePercent !== null && Number(realChangePercent) >= 0;
 
   return (
     <div className="space-y-8 pb-12">
@@ -130,11 +139,21 @@ export default function NetWorthPage() {
           {formatCurrency(netWorth, isPrivacyMode)}
         </h2>
         <div className="flex items-center justify-center space-x-2">
-          <div className="flex items-center px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
-            <ArrowUpRight size={14} className="mr-1" />
-            +4.2%
-          </div>
-          <span className="text-text-muted text-xs font-bold uppercase tracking-wider">this month</span>
+          {realChangePercent !== null ? (
+            <div className={`flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+              changePositive ? 'bg-primary/10 text-primary' : 'bg-danger/10 text-danger'
+            }`}>
+              <ArrowUpRight size={14} className={`mr-1 ${changePositive ? '' : 'rotate-180'}`} />
+              {changePositive ? '+' : ''}{realChangePercent}%
+            </div>
+          ) : (
+            <div className="flex items-center px-3 py-1 bg-text-muted/10 text-text-muted rounded-full text-xs font-bold">
+              Building history...
+            </div>
+          )}
+          <span className="text-text-muted text-xs font-bold uppercase tracking-wider">
+            {realChangePercent !== null ? 'all time' : 'check back tomorrow'}
+          </span>
         </div>
       </section>
 
@@ -232,25 +251,35 @@ export default function NetWorthPage() {
             <h3 className="text-lg font-bold text-text-dark">Net Worth Growth</h3>
           </div>
           <div className="h-[300px] w-full min-h-0 min-w-0 flex-1">
-            <ResponsiveContainer width="99%" height="99%">
-              <AreaChart data={growthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#27C4E1" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#27C4E1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke="#E2E8F0" strokeDasharray="3 3" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11, fontWeight: 600 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 10, fontWeight: 600 }} tickFormatter={(v) => formatCurrencyCompact(v, isPrivacyMode)} />
-                <RechartsTooltip 
-                  formatter={(value: number) => formatCurrency(value, isPrivacyMode)}
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--color-card)', color: 'var(--color-text-dark)' }}
-                  itemStyle={{ color: 'var(--color-text-dark)' }}
-                />
-                <Area type="monotone" dataKey="value" stroke="#27C4E1" strokeWidth={3} fillOpacity={1} fill="url(#colorNetWorth)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {growthData.length >= 2 ? (
+              <ResponsiveContainer width="99%" height="99%">
+                <AreaChart data={growthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorNetWorth" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#27C4E1" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#27C4E1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="#E2E8F0" strokeDasharray="3 3" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11, fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 10, fontWeight: 600 }} tickFormatter={(v) => formatCurrencyCompact(v, isPrivacyMode)} />
+                  <RechartsTooltip 
+                    formatter={(value: number) => formatCurrency(value, isPrivacyMode)}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--color-card)', color: 'var(--color-text-dark)' }}
+                    itemStyle={{ color: 'var(--color-text-dark)' }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#27C4E1" strokeWidth={3} fillOpacity={1} fill="url(#colorNetWorth)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-3">
+                <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center">
+                  <LineChartIcon size={32} className="text-primary/50" />
+                </div>
+                <p className="font-bold text-text-dark">History starts building today</p>
+                <p className="text-sm text-text-muted max-w-xs">Your net worth is snapshotted daily. Check back tomorrow to see your first trend line.</p>
+              </div>
+            )}
           </div>
         </section>
       </div>

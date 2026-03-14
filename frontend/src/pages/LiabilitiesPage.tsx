@@ -62,7 +62,16 @@ export default function LiabilitiesPage() {
 
   useEffect(() => { fetchData(); }, [refreshKey]);
 
+  // Card-debt rows (id starts with 'card-debt-') are virtual — they are
+  // derived from the cards table. Direct delete is not supported.
+  const isCardDebt = (id: string) => id.startsWith('card-debt-');
+
   const handleDelete = async (id: string) => {
+    if (isCardDebt(id)) {
+      setDeleteConfirm(null);
+      showToast('Card debt is tracked via your credit card. Manage it from Cards.', 'error');
+      return;
+    }
     try {
       await api.deleteLiability(id);
       setDeleteConfirm(null);
@@ -70,6 +79,7 @@ export default function LiabilitiesPage() {
       fetchData();
     } catch (error) {
       console.error('Failed to delete:', error);
+      showToast('Failed to delete liability', 'error');
     }
   };
 
@@ -359,21 +369,32 @@ export default function LiabilitiesPage() {
                               <div className="flex items-center space-x-4 shrink-0">
                                 <p className="text-xl font-bold text-text-dark">{formatCurrency(lib.balance, isPrivacyMode)}</p>
                                 <div className="flex items-center space-x-1">
-                                  <button
-                                    onClick={() => { setEditingLiab(lib); setIsModalOpen(true); }}
-                                    className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-text-dark transition-colors"
-                                    title="Edit"
-                                  >
-                                    <Pencil size={14} />
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteConfirm(lib.id)}
-                                    className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-red-500 transition-colors"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
+                                   {isCardDebt(lib.id) ? (
+                                     <span
+                                       className="px-2 py-1.5 rounded-lg bg-background border border-border text-[9px] font-bold text-text-muted uppercase tracking-widest cursor-default select-none"
+                                       title="Managed via Cards"
+                                     >
+                                       Auto
+                                     </span>
+                                   ) : (
+                                     <>
+                                       <button
+                                         onClick={() => { setEditingLiab(lib); setIsModalOpen(true); }}
+                                         className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-text-dark transition-colors"
+                                         title="Edit"
+                                       >
+                                         <Pencil size={14} />
+                                       </button>
+                                       <button
+                                         onClick={() => setDeleteConfirm(lib.id)}
+                                         className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-red-500 transition-colors"
+                                         title="Delete"
+                                       >
+                                         <Trash2 size={14} />
+                                       </button>
+                                     </>
+                                   )}
+                                 </div>
                               </div>
                             </div>
                           </div>

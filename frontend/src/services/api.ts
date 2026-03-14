@@ -89,6 +89,7 @@ export interface Transaction {
   transaction_date: string;
   type: 'income' | 'expense' | 'payment' | 'spend';
   card_id?: string;
+  liability_id?: string;
   updated_at?: string;
 }
 
@@ -141,6 +142,7 @@ export interface Subscription {
   bank_id?: string;
   month_count: number;
   status: string;
+  source?: 'manual' | 'auto';
 }
 
 export interface SubscriptionsResponse {
@@ -155,6 +157,23 @@ export interface CSVUploadResult {
   duplicates: number;
   errors: string[];
   total_rows: number;
+}
+
+export interface NetWorthHistory {
+  id: string;
+  date: string;
+  total_assets: number;
+  total_liabilities: number;
+  net_worth: number;
+}
+
+export interface SafeToSpend {
+  monthly_income: number;
+  monthly_subscriptions: number;
+  monthly_emis: number;
+  mandatory_savings: number;
+  disposable_monthly: number;
+  safe_to_spend_daily: number;
 }
 
 export interface FinancialHealth {
@@ -190,13 +209,15 @@ export interface SpendingPrediction {
 
 import { auth } from '../lib/firebase';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const token = await auth.currentUser?.getIdToken();
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetch(`${API_BASE_URL}${url}`, { ...options, headers });
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
     throw new Error(errData.error || `HTTP error! status: ${res.status}`);
@@ -362,6 +383,17 @@ export const api = {
     const res = await fetchWithAuth('/api/subscriptions');
     return res.json();
   },
+  async addSubscription(sub: { name: string; amount: number; billing_cycle: string; next_payment_date?: string; bank_id?: string }): Promise<{ success: boolean; id: string }> {
+    const res = await fetchWithAuth('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub),
+    });
+    return res.json();
+  },
+  async deleteSubscription(id: string): Promise<void> {
+    await fetchWithAuth(`/api/subscriptions/${id}`, { method: 'DELETE' });
+  },
   async getFinancialHealth(): Promise<FinancialHealth> {
     const res = await fetchWithAuth('/api/financial-health');
     return res.json();
@@ -369,5 +401,26 @@ export const api = {
   async getSpendingPredictions(): Promise<SpendingPrediction> {
     const res = await fetchWithAuth('/api/spending-predictions');
     return res.json();
+  },
+  async getNetWorthHistory(): Promise<NetWorthHistory[]> {
+    const res = await fetchWithAuth('/api/net-worth/history');
+    return res.json();
+  },
+  async getSafeToSpend(): Promise<SafeToSpend> {
+    const res = await fetchWithAuth('/api/safe-to-spend');
+    return res.json();
+  },
+  async foreclosEMI(id: string): Promise<void> {
+    await fetchWithAuth(`/api/emis/${id}/foreclose`, { method: 'POST' });
+  },
+  async updateBankTransaction(id: string, tx: Partial<BankTransaction>): Promise<void> {
+    await fetchWithAuth(`/api/bank-transactions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tx),
+    });
+  },
+  async deleteBankTransaction(id: string): Promise<void> {
+    await fetchWithAuth(`/api/bank-transactions/${id}`, { method: 'DELETE' });
   },
 };

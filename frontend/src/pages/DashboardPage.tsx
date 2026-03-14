@@ -8,11 +8,12 @@ import {
   ArrowDownLeft,
   Clock,
   ChevronRight,
-  Plus
+  Plus,
+  Zap
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
-import { api, NetWorthSummary, Transaction } from '../services/api';
+import { api, NetWorthSummary, Transaction, SafeToSpend } from '../services/api';
 import { formatCurrency } from '../lib/formatters';
 import { Link } from 'react-router-dom';
 
@@ -20,19 +21,21 @@ export default function DashboardPage() {
   const { isPrivacyMode, refreshKey } = useUI();
   const [summary, setSummary] = useState<NetWorthSummary | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [safeToSpend, setSafeToSpend] = useState<SafeToSpend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [summaryData, transactionsData] = await Promise.all([
+        const [summaryData, transactionsData, safeData] = await Promise.all([
           api.getNetWorth(),
-          api.getTransactions()
+          api.getTransactions(),
+          api.getSafeToSpend().catch(() => null),
         ]);
         setSummary(summaryData);
-        // Get only 5 most recent
         setRecentTransactions(transactionsData.slice(0, 5));
+        setSafeToSpend(safeData);
       } catch (error) {
         console.error('Failed to fetch dashboard data', error);
       } finally {
@@ -93,8 +96,8 @@ export default function DashboardPage() {
       </section>
 
       {/* 2. Quick Stats Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slam" style={{ animationDelay: '0.1s' }}>
-        {/* Liquidity (Total Assets) - Match White Progress Card aesthetic */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-slam" style={{ animationDelay: '0.1s' }}>
+        {/* Liquidity (Total Assets) */}
         <div className="bg-white p-6 lg:p-8 rounded-[2rem] shadow-xl text-black hover:-translate-y-1 transition-transform group">
           <div className="flex items-center justify-between mb-4">
             <div className="h-16 w-16 bg-[#27C4E1] text-white rounded-[1.5rem] flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg shadow-[#27C4E1]/30">
@@ -112,7 +115,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Credit Used (Total Liabilities) - Match Purple Subscription Card aesthetic */}
+        {/* Credit Used (Total Liabilities) */}
         <div className="bg-[#00BFFF] p-6 lg:p-8 rounded-[2rem] shadow-xl text-white hover:-translate-y-1 transition-transform group">
           <div className="flex items-center justify-between mb-4">
             <div className="h-16 w-16 bg-white text-[#00BFFF] rounded-[1.5rem] flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg">
@@ -128,6 +131,34 @@ export default function DashboardPage() {
               {formatCurrency(summary?.totalLiabilities || 0, isPrivacyMode)}
             </h3>
           </div>
+        </div>
+
+        {/* Safe-to-Spend Widget */}
+        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-6 lg:p-8 rounded-[2rem] shadow-xl text-white hover:-translate-y-1 transition-transform group relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-16 w-16 bg-white/20 text-white rounded-[1.5rem] flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg backdrop-blur-sm">
+                <Zap size={28} strokeWidth={2.5} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-white/70 text-[11px] font-bold uppercase tracking-widest">Safe to Spend Daily</p>
+              <h3 className="text-[2rem] font-bold tracking-tight text-white">
+                {safeToSpend ? formatCurrency(safeToSpend.safe_to_spend_daily, isPrivacyMode) : '—'}
+              </h3>
+              {safeToSpend && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
+                    EMIs + Subs: {formatCurrency((safeToSpend.monthly_emis || 0) + (safeToSpend.monthly_subscriptions || 0), false)}/mo
+                  </p>
+                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
+                    Disposable: {formatCurrency(safeToSpend.disposable_monthly, false)}/mo
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-8 -mt-8" />
         </div>
       </section>
 
