@@ -4,8 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabaseClient';
 import { LayoutDashboard } from 'lucide-react';
 
 const GoogleIcon = () => (
@@ -35,7 +34,8 @@ export default function LoginPage() {
     try {
       setError('');
       setIsLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
@@ -49,7 +49,6 @@ export default function LoginPage() {
       setError('');
       setIsLoading(true);
       await signInWithGoogle();
-      navigate('/dashboard');
     } catch (err: any) {
       setError('Failed to sign in with Google');
       setIsLoading(false);

@@ -86,10 +86,10 @@ export default function AppLayout() {
         <div className="p-6 border-t border-border space-y-4">
           <div className="flex items-center space-x-3 p-3 bg-background rounded-2xl">
             <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary/20">
-              {getInitials(currentUser?.displayName || currentUser?.email)}
+              {getInitials(currentUser?.user_metadata?.full_name || currentUser?.email)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-text-dark truncate">{currentUser?.displayName || currentUser?.email}</p>
+              <p className="text-sm font-bold text-text-dark truncate">{currentUser?.user_metadata?.full_name || currentUser?.email}</p>
               <p className="text-[10px] font-medium text-text-muted truncate uppercase tracking-wider">Premium Member</p>
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function AppLayout() {
               {isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-primary/20">
-              {getInitials(currentUser?.displayName || currentUser?.email)}
+              {getInitials(currentUser?.user_metadata?.full_name || currentUser?.email)}
             </div>
           </div>
         </header>
@@ -138,7 +138,7 @@ export default function AppLayout() {
         <header className="hidden lg:flex sticky top-0 z-30 bg-background/80 backdrop-blur-md px-8 py-6 items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-text-muted uppercase tracking-widest">Overview</h2>
-            <p className="text-2xl font-bold text-text-dark">Welcome back{currentUser?.displayName ? `, ${currentUser.displayName.split(' ')[0]}` : ''}</p>
+            <p className="text-2xl font-bold text-text-dark">Welcome back{currentUser?.user_metadata?.full_name ? `, ${currentUser.user_metadata.full_name.split(' ')[0]}` : ''}</p>
           </div>
           <div className="flex items-center space-x-4">
             <button 

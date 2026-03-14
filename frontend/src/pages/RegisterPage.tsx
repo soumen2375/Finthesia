@@ -4,8 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { motion } from 'motion/react';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabaseClient';
 import { LayoutDashboard } from 'lucide-react';
 
 const GoogleIcon = () => (
@@ -40,8 +39,14 @@ export default function RegisterPage() {
     try {
       setError('');
       setIsLoading(true);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: name });
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name },
+        },
+      });
+      if (signUpError) throw signUpError;
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to create account');

@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { motion } from 'motion/react';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabaseClient';
 import { LayoutDashboard, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
@@ -19,15 +18,13 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     setError('');
     try {
-      // Configure to send standard password reset templates automatically.
-      await sendPasswordResetEmail(auth, email);
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (resetError) throw resetError;
       setIsSent(true);
     } catch (err: any) {
-      if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email address.');
-      } else {
-        setError(err.message || 'Failed to send reset email. Please try again later.');
-      }
+      setError(err.message || 'Failed to send reset email. Please try again later.');
     } finally {
       setIsLoading(false);
     }
