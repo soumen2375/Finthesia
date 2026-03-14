@@ -1,9 +1,20 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import ScrollToTop from './components/ScrollToTop';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import FeaturesPage from './pages/FeaturesPage';
+import PricingPage from './pages/PricingPage';
+import BlogPage from './pages/BlogPage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
+import FaqPage from './pages/FaqPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import ShippingPage from './pages/ShippingPage';
+import RefundsPage from './pages/RefundsPage';
 import DashboardPage from './pages/DashboardPage';
 import NetWorthPage from './pages/NetWorthPage';
 import CardsPage from './pages/CardsPage';
@@ -25,18 +36,35 @@ import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 export default function App() {
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "82556317420-qg2qa3c150969dliqrpl8mufhaimtiga.apps.googleusercontent.com";
+
   return (
     <ErrorBoundary>
     <AuthProvider>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <UIProvider>
         <ToastProvider>
           <Router>
+            <ScrollToTop />
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/faq" element={<FaqPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/shipping" element={<ShippingPage />} />
+              <Route path="/refunds" element={<RefundsPage />} />
               
               {/* Authenticated Routes */}
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -63,6 +91,7 @@ export default function App() {
           </Router>
         </ToastProvider>
       </UIProvider>
+    </GoogleOAuthProvider>
     </AuthProvider>
     </ErrorBoundary>
   );

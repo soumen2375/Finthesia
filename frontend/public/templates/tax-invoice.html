@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tax Invoice - Finthesia</title>
+<style>
+  body { 
+    font-family: 'Helvetica Neue', Arial, sans-serif; 
+    color: #333333; 
+    line-height: 1.5; 
+    margin: 0; 
+    padding: 0;
+    background-color: #f8fafc;
+  }
+  .invoice-box {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 40px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    border-radius: 8px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #22C1E8;
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+  }
+  .logo { font-size: 32px; font-weight: 900; color: #494949; }
+  .brand-text { color: #22C1E8; }
+  .invoice-title {
+    font-size: 36px;
+    font-weight: bold;
+    color: #22C1E8;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0;
+    text-align: right;
+  }
+  
+  .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 40px;
+  }
+  .company-details h4, .bill-to h4 {
+    color: #494949;
+    font-size: 16px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 8px;
+    margin-top: 0;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .meta-data table {
+    width: 100%;
+    margin-bottom: 32px;
+    border-collapse: collapse;
+  }
+  .meta-data td {
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  .meta-data td:first-child {
+    font-weight: bold;
+    color: #64748b;
+    width: 40%;
+  }
+  
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 32px;
+  }
+  .items-table th {
+    background-color: #f1f5f9;
+    color: #494949;
+    text-align: left;
+    padding: 12px;
+    font-weight: bold;
+    border-bottom: 2px solid #cbd5e1;
+  }
+  .items-table th.right, .items-table td.right {
+    text-align: right;
+  }
+  .items-table td {
+    padding: 16px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+  .item-desc {
+    font-weight: bold;
+    color: #0f172a;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .item-meta {
+    font-size: 12px;
+    color: #64748b;
+  }
+  
+  .totals-section {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .totals-table {
+    width: 350px;
+    border-collapse: collapse;
+  }
+  .totals-table td {
+    padding: 8px 12px;
+    text-align: right;
+    font-size: 15px;
+  }
+  .totals-table td.label {
+    text-align: left;
+    color: #64748b;
+  }
+  .totals-table tr.grand-total {
+    background-color: #f8fafc;
+    font-weight: bold;
+    font-size: 18px;
+    color: #22C1E8;
+  }
+  .totals-table tr.grand-total td {
+    border-top: 2px solid #22C1E8;
+    border-bottom: 2px solid #22C1E8;
+    padding: 16px 12px;
+  }
+  
+  .footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+</style>
+</head>
+<body>
+
+<div class="invoice-box">
+  
+  <div class="header">
+    <div>
+      <div class="logo">Fin<span class="brand-text">thesia</span></div>
+      <div style="margin-top: 8px; font-size: 14px; color: #64748b;">
+        Engineered by Riknova Technology
+      </div>
+    </div>
+    <div>
+      <h1 class="invoice-title">Tax Invoice</h1>
+    </div>
+  </div>
+
+  <div class="details-grid">
+    <div class="company-details">
+      <h4>Billed From</h4>
+      <strong>Riknova Technology</strong><br>
+      Kismat Narajole<br>
+      West Medinipur, West Bengal 721211<br>
+      India<br>
+      <div style="margin-top: 12px;">
+        <strong>GSTIN:</strong> {{company_gstin}}<br>
+        <strong>PAN:</strong> {{company_pan}}<br>
+        <strong>Email:</strong> support@finthesia.com
+      </div>
+    </div>
+    
+    <div class="bill-to">
+      <h4>Billed To</h4>
+      <strong>{{customer_name}}</strong><br>
+      {{customer_address_line1}}<br>
+      {{customer_state}}, {{customer_country}} {{customer_zip}}<br>
+      <div style="margin-top: 12px;">
+        <strong>Email:</strong> {{customer_email}}<br>
+        <strong>GSTIN/UIN:</strong> {{customer_gstin_if_applicable}}
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-data">
+    <table>
+      <tr>
+        <td>Invoice Number:</td>
+        <td>{{invoice_number}}</td>
+        <td>Invoice Date:</td>
+        <td>{{invoice_date}}</td>
+      </tr>
+      <tr>
+        <td>Order Reference:</td>
+        <td>{{order_id}}</td>
+        <td>Payment Status:</td>
+        <td><strong style="color: #10b981;">PAID</strong> via {{payment_method}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th class="right">HSN/SAC</th>
+        <th class="right">Rate</th>
+        <th class="right">Qty</th>
+        <th class="right">Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="item-desc">Finthesia {{plan_name}} Plan - {{dynamic_billing_cycle}} Subscription</span>
+          <span class="item-meta">Billing Period: {{billing_period_start}} to {{billing_period_end}}</span>
+        </td>
+        <td class="right">998319</td>
+        <td class="right">{{base_price}}</td>
+        <td class="right">1</td>
+        <td class="right">{{base_price}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals-section">
+    <table class="totals-table">
+      <tr>
+        <td class="label">Taxable Amount:</td>
+        <td>₹{{base_price}}</td>
+      </tr>
+      <tr>
+        <td class="label">IGST (18%):</td>
+        <td>₹{{igst_amount}}</td>
+      </tr>
+      <!-- If intra-state:
+      <tr>
+        <td class="label">CGST (9%):</td>
+        <td>₹{{cgst_amount}}</td>
+      </tr>
+      <tr>
+        <td class="label">SGST (9%):</td>
+        <td>₹{{sgst_amount}}</td>
+      </tr>
+      -->
+      <tr class="grand-total">
+        <td class="label" style="color: #494949;">Total Invoice Value:</td>
+        <td>₹{{total_amount}}</td>
+      </tr>
+    </table>
+  </div>
+  
+  <div style="margin-top: 32px; font-size: 13px; color: #494949;">
+    <strong>Amount in words:</strong> Indian Rupees {{amount_in_words}} Only.
+  </div>
+
+  <div class="footer">
+    <p>This is a computer-generated invoice and does not require a physical signature.</p>
+    <p>&copy; 2026 Riknova Technology. All rights reserved.</p>
+  </div>
+  
+</div>
+
+</body>
+</html>

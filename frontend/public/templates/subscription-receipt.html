@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subscription Confirmed - Finthesia</title>
+<style>
+  body { 
+    font-family: 'Helvetica Neue', Arial, sans-serif; 
+    background-color: #f8fafc; 
+    color: #494949; 
+    line-height: 1.6; 
+    margin: 0; 
+    padding: 0; 
+  }
+  .container { 
+    max-width: 600px; 
+    margin: 40px auto; 
+    padding: 32px; 
+    background-color: #ffffff; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+    border: 1px solid #f1f5f9; 
+  }
+  .header { 
+    text-align: center; 
+    margin-bottom: 32px; 
+  }
+  .logo { 
+    font-size: 28px; 
+    font-weight: 800; 
+    color: #494949; 
+  }
+  .brand-text { 
+    color: #22C1E8; 
+  }
+  .receipt-box {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 15px;
+  }
+  .receipt-total {
+    border-top: 1px dashed #cbd5e1;
+    margin-top: 16px;
+    padding-top: 16px;
+    font-weight: bold;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .btn { 
+    display: inline-block; 
+    padding: 14px 32px; 
+    background-color: #22C1E8; 
+    color: #ffffff; 
+    text-decoration: none; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    margin: 16px 0;
+    transition: background-color 0.3s ease;
+  }
+  .btn:hover {
+    background-color: #1eb0cc;
+  }
+  .footer { 
+    text-align: center; 
+    font-size: 13px; 
+    color: #94a3b8; 
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #f1f5f9;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">Fin<span class="brand-text">thesia</span></div>
+  </div>
+  <h2 style="text-align: center; color: #494949; margin-bottom: 16px;">Subscription Confirmed!</h2>
+  
+  <p>Hi {{user_name}},</p>
+  <p>Thank you for upgrading to the <strong>{{plan_name}}</strong> plan! Your payment was successful, and your premium features have been instantly unlocked.</p>
+  
+  <div class="receipt-box">
+    <h3 style="margin-top: 0; color: #334155; font-size: 16px; margin-bottom: 16px;">Order Details</h3>
+    <div class="receipt-row">
+      <span>Order Number:</span>
+      <span style="font-weight: 500;">{{order_number}}</span>
+    </div>
+    <div class="receipt-row">
+      <span>Date:</span>
+      <span style="font-weight: 500;">{{billing_date}}</span>
+    </div>
+    <div class="receipt-row">
+      <span>Billing Cycle:</span>
+      <span style="font-weight: 500;">{{billing_cycle}}</span>
+    </div>
+    
+    <div class="receipt-total">
+      <span>Total Paid:</span>
+      <span>₹{{amount_paid}}</span>
+    </div>
+  </div>
+  
+  <p>A detailed Tax Invoice (including GST breakdown) is attached to this email as a PDF for your accounting records.</p>
+  
+  <div style="text-align: center;">
+    <a href="{{dashboard_link}}" class="btn">Explore Premium Features</a>
+  </div>
+  
+  <div class="footer">
+    <p>If you have any questions about this charge, contact support@finthesia.com.</p>
+    <p>Finthesia is engineered by Riknova Technology.<br>Kismat Narajole, West Medinipur, West Bengal, India 721211</p>
+  </div>
+</div>
+</body>
+</html>
