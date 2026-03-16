@@ -84,7 +84,6 @@ export default function AppLayout() {
       <aside className="hidden lg:flex w-72 bg-card border-r border-border flex-col sticky top-0 h-screen z-40">
         <div className="px-6 py-6 pb-2">
           <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary/20">F</div>
             <div className="logo">
               <span className="logo-fin">fin</span><span className="logo-thesia">thesia</span>
             </div>

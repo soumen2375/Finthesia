@@ -21,8 +21,15 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Sync dark mode class with document and persist
+  // Only apply dark mode on authenticated dashboard routes
   useEffect(() => {
-    if (isDarkMode) {
+    const isPublicPage = [
+      '/', '/login', '/register', '/forgot-password', '/about', 
+      '/features', '/pricing', '/contact', '/faq', '/blog',
+      '/terms', '/privacy', '/shipping', '/refunds'
+    ].includes(window.location.pathname);
+
+    if (isDarkMode && !isPublicPage) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');

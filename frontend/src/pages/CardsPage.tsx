@@ -443,7 +443,7 @@ export default function CardsPage() {
                   </div>
 
                   {/* Budget Tracking Bar */}
-                  {activeCard.monthly_budget && activeCard.monthly_budget > 0 && (() => {
+                  {(activeCard.monthly_budget || 0) > 0 && (() => {
                     const spent = cardSpending[activeCard.id] || 0;
                     const budget = activeCard.monthly_budget;
                     const pct = Math.min(100, (spent / budget) * 100);
