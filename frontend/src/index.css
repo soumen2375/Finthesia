@@ -62,6 +62,18 @@
   .card {
     @apply bg-card p-8 rounded-[2.5rem] shadow-sm border border-border transition-all duration-200 hover:shadow-md hover:-translate-y-1;
   }
+
+  .logo {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: "Inter", "Poppins", sans-serif;
+  }
+  .logo-fin {
+    color: #1f2937;   /* dark slate / dark gray */
+  }
+  .logo-thesia {
+    color: #27C4E1;   /* cyan brand color */
+  }
 }
 
 /* Slam-in animation */

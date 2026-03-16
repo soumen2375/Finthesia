@@ -35,6 +35,7 @@ import { UIProvider } from './context/UIContext';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import BackToTop from './components/BackToTop';
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -49,6 +50,7 @@ export default function App() {
         <ToastProvider>
           <Router>
             <ScrollToTop />
+            <BackToTop />
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<LoginPage />} />

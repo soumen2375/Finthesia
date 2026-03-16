@@ -6,15 +6,6 @@ import PublicHeader from '../components/PublicHeader';
 import PublicFooter from '../components/PublicFooter';
 
 export default function LandingPage() {
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowBackToTop(window.scrollY > 400);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[#27C4E1] selection:text-white flex flex-col">
@@ -300,20 +291,6 @@ export default function LandingPage() {
       </main>
 
       <PublicFooter />
-
-      {/* Floating Back to Top Button */}
-      {showBackToTop && (
-        <button 
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-8 right-8 bg-white text-slate-600 py-2.5 px-4 rounded-full shadow-lg shadow-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all z-50 flex items-center gap-3 border border-slate-100 font-medium"
-          aria-label="Back to top"
-        >
-          <div className="bg-[#1f6feb] text-white p-1 rounded-full flex items-center justify-center">
-            <ArrowUp className="w-4 h-4 stroke-[3]" />
-          </div>
-          <span className="text-[15px] text-[#4b5563]">Back To Top</span>
-        </button>
-      )}
     </div>
   );
 }
