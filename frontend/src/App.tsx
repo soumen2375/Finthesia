@@ -46,54 +46,54 @@ export default function App() {
     <ErrorBoundary>
     <AuthProvider>
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <UIProvider>
-        <ToastProvider>
           <Router>
-            <ScrollToTop />
-            <BackToTop />
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              
-              <Route path="/features" element={<FeaturesPage />} />
-              <Route path="/pricing" element={<PricingPage />} />
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/faq" element={<FaqPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/shipping" element={<ShippingPage />} />
-              <Route path="/refunds" element={<RefundsPage />} />
-              
-              {/* Authenticated Routes */}
-              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/net-worth" element={<NetWorthPage />} />
-                <Route path="/cards" element={<CardsPage />} />
-                <Route path="/liabilities" element={<LiabilitiesPage />} />
-                <Route path="/assets" element={<AssetsPage />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/budgets" element={<BudgetsPage />} />
-                <Route path="/bills" element={<BillsPage />} />
-                <Route path="/insights" element={<InsightsPage />} />
-                <Route path="/banks" element={<BankAccountsPage />} />
-                <Route path="/banks/:bankId" element={<BankTransactionsPage />} />
-                <Route path="/subscriptions" element={<SubscriptionsPage />} />
-                <Route path="/financial-health" element={<FinancialHealthPage />} />
-                <Route path="/spending-predictions" element={<SpendingPredictionPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-              </Route>
-              
-              {/* Default route */}
-              <Route path="/" element={<LandingPage />} />
-            </Routes>
+            <UIProvider>
+              <ToastProvider>
+                <ScrollToTop />
+                <BackToTop />
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                  
+                  <Route path="/features" element={<FeaturesPage />} />
+                  <Route path="/pricing" element={<PricingPage />} />
+                  <Route path="/blog" element={<BlogPage />} />
+                  <Route path="/about" element={<AboutPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/faq" element={<FaqPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/shipping" element={<ShippingPage />} />
+                  <Route path="/refunds" element={<RefundsPage />} />
+                  
+                  {/* Authenticated Routes */}
+                  <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/net-worth" element={<NetWorthPage />} />
+                    <Route path="/cards" element={<CardsPage />} />
+                    <Route path="/liabilities" element={<LiabilitiesPage />} />
+                    <Route path="/assets" element={<AssetsPage />} />
+                    <Route path="/analytics" element={<AnalyticsPage />} />
+                    <Route path="/budgets" element={<BudgetsPage />} />
+                    <Route path="/bills" element={<BillsPage />} />
+                    <Route path="/insights" element={<InsightsPage />} />
+                    <Route path="/banks" element={<BankAccountsPage />} />
+                    <Route path="/banks/:bankId" element={<BankTransactionsPage />} />
+                    <Route path="/subscriptions" element={<SubscriptionsPage />} />
+                    <Route path="/financial-health" element={<FinancialHealthPage />} />
+                    <Route path="/spending-predictions" element={<SpendingPredictionPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                  </Route>
+                  
+                  {/* Default route */}
+                  <Route path="/" element={<LandingPage />} />
+                </Routes>
+              </ToastProvider>
+            </UIProvider>
           </Router>
-        </ToastProvider>
-      </UIProvider>
-    </GoogleOAuthProvider>
+      </GoogleOAuthProvider>
     </AuthProvider>
     </ErrorBoundary>
   );

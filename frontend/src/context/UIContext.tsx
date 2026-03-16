@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 interface UIContextType {
   isPrivacyMode: boolean;
@@ -19,6 +20,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     try { return JSON.parse(localStorage.getItem('darkMode') || 'false'); } catch { return false; }
   });
   const [refreshKey, setRefreshKey] = useState(0);
+  const location = useLocation();
 
   // Sync dark mode class with document and persist
   // Only apply dark mode on authenticated dashboard routes
@@ -27,7 +29,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       '/', '/login', '/register', '/forgot-password', '/about', 
       '/features', '/pricing', '/contact', '/faq', '/blog',
       '/terms', '/privacy', '/shipping', '/refunds'
-    ].includes(window.location.pathname);
+    ].includes(location.pathname);
 
     if (isDarkMode && !isPublicPage) {
       document.documentElement.classList.add('dark');
@@ -35,7 +37,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
+  }, [isDarkMode, location.pathname]);
 
   // Persist privacy mode
   useEffect(() => {
