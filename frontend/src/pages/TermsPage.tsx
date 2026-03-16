@@ -42,7 +42,7 @@ export default function TermsPage() {
            <div className="flex flex-col lg:flex-row gap-12 lg:gap-24 relative">
              
              {/* Sidebar Navigation */}
-             <aside className="w-full lg:w-80 flex-shrink-0">
+             <aside className="hidden lg:block w-full lg:w-80 flex-shrink-0">
                 <div className="sticky top-24 flex flex-col pt-2 pb-8">
                    {sections.map((sec, idx) => (
                       <a 
