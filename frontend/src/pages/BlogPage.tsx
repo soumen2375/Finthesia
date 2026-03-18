@@ -204,7 +204,7 @@ export default function BlogPage() {
                  </form>
                  
                  <p className="text-xs text-slate-500 pt-4">
-                    By subscribing, you agree to Riknova Technology's <Link to="/privacy" className="underline hover:text-white transition-colors">Privacy Policy</Link>.
+                    By subscribing, you agree to Riknova Technology's <Link to="/privacy-policy" className="underline hover:text-white transition-colors">Privacy Policy</Link>.
                  </p>
               </div>
            </div>

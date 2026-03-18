@@ -15,7 +15,8 @@ export default function PrivacyPage() {
     { id: "ai", title: "9. AI & Automated Processing" },
     { id: "links", title: "10. Third-Party Links" },
     { id: "changes", title: "11. Changes to Policy" },
-    { id: "contact", title: "12. Contact Us" },
+    { id: "google", title: "12. Google API Services Usage" },
+    { id: "contact", title: "13. Contact Us" },
   ];
 
   return (
@@ -153,8 +154,15 @@ export default function PrivacyPage() {
                   </p>
                 </div>
 
+                <div id="google" className="scroll-mt-28 mb-16">
+                  <h2 className="text-3xl font-extrabold text-[#1e1b4b] mb-8">12. Google API Services Usage</h2>
+                  <p className="text-lg text-slate-600 leading-[1.8] mb-8">
+                     Finthesia's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-[#27C4E1] font-bold hover:underline">Google API Services User Data Policy</a>, including the Limited Use requirements. We request access to your Google Profile and Email data solely for seamless authentication and user personalization within the app. We do not sell or transfer this data to third parties for any unauthorized purposes.
+                  </p>
+                </div>
+
                 <div id="contact" className="scroll-mt-28 mb-16">
-                  <h2 className="text-3xl font-extrabold text-[#1e1b4b] mb-8">12. Contact Us</h2>
+                  <h2 className="text-3xl font-extrabold text-[#1e1b4b] mb-8">13. Contact Us</h2>
                   <p className="text-lg text-slate-600 leading-[1.8] mb-8">
                      If you have any questions or concerns about this Privacy Policy, please contact us:<br/><br/>
                      <strong className="text-slate-800">Email:</strong> <a href="mailto:support@finthesia.com" className="text-[#27C4E1] font-bold">support@finthesia.com</a><br/>

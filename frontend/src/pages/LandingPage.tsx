@@ -33,6 +33,7 @@ export default function LandingPage() {
               </h1>
               
               <p className="text-xl md:text-2xl text-slate-600 leading-relaxed max-w-3xl mx-auto">
+                <span className="font-semibold text-slate-800">Your Personal Financial Companion.</span><br/>
                 Finthesia is the smart, simple way to track your expenses, manage budgets, and grow your net worth. See all your finances in one place, backed by powerful AI insights.
               </p>
 
@@ -94,6 +95,84 @@ export default function LandingPage() {
               <p className="text-xl md:text-2xl font-medium text-slate-300">
                 "Join thousands taking control of their financial destiny. <br className="hidden md:block"/> Secure, Private, and built by <span className="text-white font-semibold">Riknova Technology</span>."
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* --- WHAT IS FINTHESIA? --- */}
+        <section className="py-24 bg-white border-b border-slate-100 relative">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16 max-w-3xl mx-auto">
+              <h2 className="text-sm font-bold tracking-widest text-[#27C4E1] uppercase mb-3">About The App</h2>
+              <h3 className="text-3xl md:text-5xl font-bold text-slate-900 mb-6">What is Finthesia?</h3>
+              <p className="text-xl text-slate-600 leading-relaxed">
+                Finthesia helps users <span className="font-semibold text-slate-800">track expenses, manage budgets, analyze spending patterns, and make smarter financial decisions</span> — all in one dashboard.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 text-center">
+                <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <Activity className="h-6 w-6 text-[#27C4E1]" />
+                </div>
+                <h4 className="font-bold text-slate-900 mb-2">Expense Tracking</h4>
+                <p className="text-slate-600 text-sm">Automatically categorizes and tracks your daily spending.</p>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 text-center">
+                <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <Target className="h-6 w-6 text-[#27C4E1]" />
+                </div>
+                <h4 className="font-bold text-slate-900 mb-2">Budget Management</h4>
+                <p className="text-slate-600 text-sm">Set strict spending limits and get warned before overspending.</p>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 text-center">
+                <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <Cloud className="h-6 w-6 text-[#27C4E1]" />
+                </div>
+                <h4 className="font-bold text-slate-900 mb-2">Financial Analytics</h4>
+                <p className="text-slate-600 text-sm">Rich charts to analyze cash flow, income, and expenses over time.</p>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 text-center">
+                <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <DollarSign className="h-6 w-6 text-[#27C4E1]" />
+                </div>
+                <h4 className="font-bold text-slate-900 mb-2">Dashboard Insights</h4>
+                <p className="text-slate-600 text-sm">Holistic view of assets, liabilities, and true net worth.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* --- DATA USAGE / OAUTH DISCLOSURE --- */}
+        <section className="py-24 bg-slate-50 relative">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-sm font-bold tracking-widest text-[#27C4E1] uppercase mb-3">Privacy & Trust</h2>
+            <h3 className="text-3xl md:text-5xl font-bold text-slate-900 mb-8">Why we request your data</h3>
+            
+            <div className="bg-white rounded-3xl p-8 md:p-12 border border-slate-200 shadow-sm text-left">
+               <ul className="space-y-6">
+                 <li className="flex flex-col md:flex-row md:items-start gap-4 pb-6 border-b border-slate-100">
+                   <div className="w-12 h-12 rounded-full bg-blue-50 flex-shrink-0 flex items-center justify-center text-blue-600 font-bold">1</div>
+                   <div>
+                     <h4 className="text-xl font-bold text-slate-900 mb-2">Google Email Address</h4>
+                     <p className="text-slate-600">We request your Google email address to securely create and manage your account, allow seamless login via Google OAuth, and send important service notifications.</p>
+                   </div>
+                 </li>
+                 <li className="flex flex-col md:flex-row md:items-start gap-4 pb-6 border-b border-slate-100">
+                   <div className="w-12 h-12 rounded-full bg-emerald-50 flex-shrink-0 flex items-center justify-center text-emerald-600 font-bold">2</div>
+                   <div>
+                     <h4 className="text-xl font-bold text-slate-900 mb-2">Google Profile Information</h4>
+                     <p className="text-slate-600">Your basic Google profile info (like name and profile picture) is used solely for personalization within the dashboard to improve your experience.</p>
+                   </div>
+                 </li>
+                 <li className="flex flex-col md:flex-row md:items-start gap-4">
+                   <div className="w-12 h-12 rounded-full bg-amber-50 flex-shrink-0 flex items-center justify-center text-amber-600 font-bold">3</div>
+                   <div>
+                     <h4 className="text-xl font-bold text-slate-900 mb-2">Financial Transparency</h4>
+                     <p className="text-slate-600">If you connect financial institutions, we only use read-only access to automatically track expenses. <span className="font-semibold text-slate-800">We do not store or share your financial credentials.</span></p>
+                   </div>
+                 </li>
+               </ul>
             </div>
           </div>
         </section>

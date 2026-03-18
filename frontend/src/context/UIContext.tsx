@@ -28,7 +28,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     const isPublicPage = [
       '/', '/login', '/register', '/forgot-password', '/about', 
       '/features', '/pricing', '/contact', '/faq', '/blog',
-      '/terms', '/privacy', '/shipping', '/refunds'
+      '/terms', '/privacy-policy', '/shipping', '/refunds'
     ].includes(location.pathname);
 
     if (isDarkMode && !isPublicPage) {

@@ -94,7 +94,7 @@ export default function ForgotPasswordPage() {
           </div>
           
           <div className="text-center text-xs text-slate-500 pt-8 mt-auto pb-8">
-            Copyright © Finthesia, All Right Reserved <Link to="/terms" className="text-[#27C4E1] hover:underline mx-2">Term & Condition</Link> | <Link to="/privacy" className="text-[#27C4E1] hover:underline mx-2">Privacy & Policy</Link>
+            Copyright © Finthesia, All Right Reserved <Link to="/terms" className="text-[#27C4E1] hover:underline mx-2">Term & Condition</Link> | <Link to="/privacy-policy" className="text-[#27C4E1] hover:underline mx-2">Privacy & Policy</Link>
           </div>
         </motion.div>
       </div>

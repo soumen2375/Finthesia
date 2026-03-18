@@ -97,7 +97,7 @@ export default function RegisterPage() {
             <div className="flex items-start space-x-2 py-2">
               <input type="checkbox" id="terms" className="mt-1 rounded border-slate-300 text-[#27C4E1] focus:ring-[#27C4E1]" required />
               <label htmlFor="terms" className="text-xs text-slate-500 leading-tight">
-                I agree to the <Link to="/terms" className="text-[#27C4E1] hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-[#27C4E1] hover:underline">Privacy Policy</Link>
+                I agree to the <Link to="/terms" className="text-[#27C4E1] hover:underline">Terms of Service</Link> and <Link to="/privacy-policy" className="text-[#27C4E1] hover:underline">Privacy Policy</Link>
               </label>
             </div>
 
