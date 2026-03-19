@@ -42,11 +42,11 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className={cn(
-                "w-full bg-card rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl pointer-events-auto max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-border",
+                "w-full bg-card rounded-t-[2rem] sm:rounded-[2.5rem] shadow-2xl pointer-events-auto max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-border",
                 maxWidth
               )}
             >
-              <div className="flex items-center justify-between p-6 sm:p-8 border-b border-border shrink-0">
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border shrink-0">
                 <h2 className="text-xl sm:text-2xl font-bold text-text-dark truncate pr-4">{title}</h2>
                 <div className="flex items-center space-x-2 shrink-0">
                   {headerActions}
@@ -58,7 +58,7 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
                 {children}
               </div>
             </motion.div>

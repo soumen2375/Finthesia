@@ -96,6 +96,15 @@ export interface Transaction {
   type: 'income' | 'expense' | 'payment' | 'spend';
   card_id?: string;
   liability_id?: string;
+  account?: string;
+  paymentMethod?: string;
+  tags?: string[];
+  isRecurring?: boolean;
+  recurringFrequency?: string;   // 'Daily' | 'Weekly' | 'Monthly' | 'Yearly'
+  recurringEndDate?: string;     // ISO date string, null = ongoing
+  recurringRepeats?: number;     // null = ongoing, number = max count
+  location?: { lat: number; lon: number };
+  receiptUrl?: string;
   updated_at?: string;
 }
 
@@ -542,6 +551,15 @@ export const api = {
       p_type: transaction.type,
       p_card_id: transaction.card_id || null,
       p_liability_id: transaction.liability_id || null,
+      p_account: transaction.account || null,
+      p_payment_method: transaction.paymentMethod || null,
+      p_is_recurring: transaction.isRecurring || false,
+      p_recurring_frequency: transaction.recurringFrequency || null,
+      p_recurring_end_date: transaction.recurringEndDate || null,
+      p_recurring_repeats: transaction.recurringRepeats || null,
+      p_receipt_url: transaction.receiptUrl || null,
+      p_location: transaction.location || null,
+      p_tags: transaction.tags || [],
     });
     if (error) throw new Error(error.message);
   },
