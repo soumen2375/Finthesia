@@ -26,7 +26,7 @@ export default function Footer() {
               <a href="#" className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#545E63] hover:text-[#27C4E1] hover:border-[#27C4E1] transition-colors shadow-sm">
                 <Linkedin size={18} />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#545E63] hover:text-[#27C4E1] hover:border-[#27C4E1] transition-colors shadow-sm">
+              <a href="https://www.facebook.com/finthesia" className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#545E63] hover:text-[#27C4E1] hover:border-[#27C4E1] transition-colors shadow-sm">
                 <Facebook size={18} />
               </a>
               <a href="#" className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#545E63] hover:text-[#27C4E1] hover:border-[#27C4E1] transition-colors shadow-sm">
