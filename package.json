@@ -3,8 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "cd client && npm run dev",
-    "build": "cd client && npm run build",
-    "preview": "cd client && npm run preview"
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview"
   }
 }
