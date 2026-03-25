@@ -1,41 +1,42 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import ScrollToTop from './components/ScrollToTop';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import FeaturesPage from './pages/FeaturesPage';
-import PricingPage from './pages/PricingPage';
-import BlogPage from './pages/BlogPage';
-import AboutPage from './pages/AboutPage';
-import ContactPage from './pages/ContactPage';
-import FaqPage from './pages/FaqPage';
-import TermsPage from './pages/TermsPage';
-import PrivacyPage from './pages/PrivacyPage';
-import ShippingPage from './pages/ShippingPage';
-import RefundsPage from './pages/RefundsPage';
-import DashboardPage from './pages/DashboardPage';
-import NetWorthPage from './pages/NetWorthPage';
-import CardsPage from './pages/CardsPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import SettingsPage from './pages/SettingsPage';
-import BudgetsPage from './pages/BudgetsPage';
-import BillsPage from './pages/BillsPage';
-import InsightsPage from './pages/InsightsPage';
-import BankAccountsPage from './pages/BankAccountsPage';
-import BankTransactionsPage from './pages/BankTransactionsPage';
-import SubscriptionsPage from './pages/SubscriptionsPage';
-import FinancialHealthPage from './pages/FinancialHealthPage';
-import SpendingPredictionPage from './pages/SpendingPredictionPage';
-import LiabilitiesPage from './pages/LiabilitiesPage';
-import AssetsPage from './pages/AssetsPage';
-import AppLayout from './components/AppLayout';
-import { UIProvider } from './context/UIContext';
-import { ToastProvider } from './context/ToastContext';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import BackToTop from './components/BackToTop';
+import ScrollToTop from '@/components/common/ScrollToTop';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import LandingPage from '@/pages/public/marketing/LandingPage';
+import LoginPage from '@/pages/auth/LoginPage';
+import RegisterPage from '@/pages/auth/RegisterPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
+import FeaturesPage from '@/pages/public/marketing/FeaturesPage';
+import PricingPage from '@/pages/public/marketing/PricingPage';
+import BlogPage from '@/pages/public/marketing/BlogPage';
+import AboutPage from '@/pages/public/marketing/AboutPage';
+import ContactPage from '@/pages/public/marketing/ContactPage';
+import FaqPage from '@/pages/public/marketing/FaqPage';
+import TermsPage from '@/pages/public/legal/TermsPage';
+import PrivacyPage from '@/pages/public/legal/PrivacyPage';
+import ShippingPage from '@/pages/public/legal/ShippingPage';
+import RefundsPage from '@/pages/public/legal/RefundsPage';
+import DashboardPage from '@/pages/app/dashboard/DashboardPage';
+import NetWorthPage from '@/pages/app/dashboard/NetWorthPage';
+import CardsPage from '@/pages/app/accounts/CardsPage';
+import AnalyticsPage from '@/pages/app/dashboard/AnalyticsPage';
+import SettingsPage from '@/pages/app/settings/SettingsPage';
+import BudgetsPage from '@/pages/app/planning/BudgetsPage';
+import BillsPage from '@/pages/app/planning/BillsPage';
+import InsightsPage from '@/pages/app/dashboard/InsightsPage';
+import BankAccountsPage from '@/pages/app/accounts/BankAccountsPage';
+import BankTransactionsPage from '@/pages/app/accounts/BankTransactionsPage';
+import SubscriptionsPage from '@/pages/app/planning/SubscriptionsPage';
+import FinancialHealthPage from '@/pages/app/dashboard/FinancialHealthPage';
+import SpendingPredictionPage from '@/pages/app/dashboard/SpendingPredictionPage';
+import LiabilitiesPage from '@/pages/app/assets_liabilities/LiabilitiesPage';
+import AssetsPage from '@/pages/app/assets_liabilities/AssetsPage';
+import AppLayout from '@/components/layout/AppLayout';
+import { UIProvider } from '@/context/UIContext';
+import { ToastProvider } from '@/context/ToastContext';
+import { AuthProvider } from '@/context/AuthContext';
+import ProtectedRoute from '@/components/common/ProtectedRoute';
+import BackToTop from '@/components/common/BackToTop';
+import UnifiedLedgerPage from '@/pages/app/ledger/UnifiedLedgerPage';
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -86,6 +87,7 @@ export default function App() {
                     <Route path="/financial-health" element={<FinancialHealthPage />} />
                     <Route path="/spending-predictions" element={<SpendingPredictionPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/ledger" element={<UnifiedLedgerPage />} />
                   </Route>
                   
                   {/* Default route */}
