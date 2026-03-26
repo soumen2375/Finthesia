@@ -268,13 +268,18 @@ export function PDFStatementModal({ isOpen, onClose, bankId, onImported }: Props
                         <AlertTriangle size={18} className="text-yellow-600 shrink-0 mt-0.5" />
                         <div>
                           <p className="text-yellow-600 text-sm font-bold">
-                            {providerStatus.provider === 'ollama' ? 'Ollama is not running' : 'API not configured'}
+                            {providerStatus.provider === 'ollama' ? 'Ollama is not running' : 'API Key Not Configured'}
                           </p>
                           <p className="text-yellow-600/80 text-xs mt-1">
                             {providerStatus.provider === 'ollama' ? (
                               <>Start Ollama: <code className="bg-yellow-500/10 px-1.5 py-0.5 rounded text-[11px]">ollama serve</code> → then <code className="bg-yellow-500/10 px-1.5 py-0.5 rounded text-[11px]">ollama pull qwen2.5:7b</code></>
                             ) : (
-                              <>Set <code className="bg-yellow-500/10 px-1.5 py-0.5 rounded text-[11px]">VITE_LLM_API_KEY</code> in your .env file</>
+                              <>
+                                Add <code className="bg-yellow-500/10 px-1.5 py-0.5 rounded text-[11px]">VITE_LLM_API_KEY</code> and <code className="bg-yellow-500/10 px-1.5 py-0.5 rounded text-[11px]">VITE_LLM_API_URL</code> to your 
+                                <strong className="ml-1">
+                                  {import.meta.env.PROD ? 'hosting dashboard (Vercel/Netlify) environment variables' : '.env file'}
+                                </strong>.
+                              </>
                             )}
                           </p>
                         </div>

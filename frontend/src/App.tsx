@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import ScrollToTop from '@/components/common/ScrollToTop';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import LandingPage from '@/pages/public/marketing/LandingPage';
@@ -87,6 +87,10 @@ export default function App() {
                     <Route path="/financial-health" element={<FinancialHealthPage />} />
                     <Route path="/spending-predictions" element={<SpendingPredictionPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                  </Route>
+                  
+                  {/* Standalone Ledger Layout Route */}
+                  <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
                     <Route path="/ledger" element={<UnifiedLedgerPage />} />
                   </Route>
                   

@@ -62,7 +62,7 @@ export function detectProvider(): ProviderType {
     if (CONFIG.llmApiUrl.includes('groq')) return 'groq';
     return 'together';
   }
-  return 'ollama';
+  return import.meta.env.PROD ? 'groq' : 'ollama';
 }
 
 /**
@@ -96,11 +96,12 @@ export async function checkProviderStatus(): Promise<ProviderStatus> {
   // Hosted API — Together.ai / Groq
   // We can't easily ping these without burning tokens, so assume online if key exists
   const label = provider === 'groq' ? 'Groq' : 'Together.ai';
+  const online = !!CONFIG.llmApiKey;
   return {
     provider,
-    online: !!CONFIG.llmApiKey,
+    online,
     modelName: CONFIG.llmModel,
-    label: `${label} (${CONFIG.llmModel.split('/').pop()})`,
+    label: online ? `${label} (${CONFIG.llmModel.split('/').pop()})` : `${label} API Key Missing`,
   };
 }
 
