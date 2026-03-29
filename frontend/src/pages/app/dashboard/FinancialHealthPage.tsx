@@ -118,14 +118,14 @@ export default function FinancialHealthPage() {
   return (
     <div className="space-y-8 pb-12 font-sans tracking-tight">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-[#1C1C1E] border border-white/5 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl animate-slam">
+      <section className="relative overflow-hidden bg-[#1C1C1E] border border-white/5 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 text-white shadow-2xl animate-slam">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="space-y-4">
             <div className="inline-flex items-center px-4 py-1.5 bg-[#27C4E1] text-white text-[10px] font-bold uppercase rounded-full tracking-widest">
               <Heart size={14} className="mr-2 stroke-[3]" />
               Financial Health
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tighter">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tighter">
               Your Financial <br />Wellness Score
             </h1>
             <p className="text-white/50 text-sm font-medium max-w-md">
@@ -141,15 +141,15 @@ export default function FinancialHealthPage() {
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-slam" style={{ animationDelay: '0.1s' }}>
         <div className="bg-card p-5 rounded-2xl border border-border shadow-sm">
           <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Monthly Income</p>
-          <p className="text-2xl font-bold text-text-dark mt-1">{formatCurrency(data.monthly_income, isPrivacyMode)}</p>
+          <p className="text-xl sm:text-2xl font-bold text-text-dark mt-1">{formatCurrency(data.monthly_income, isPrivacyMode)}</p>
         </div>
         <div className="bg-card p-5 rounded-2xl border border-border shadow-sm">
           <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Monthly Expenses</p>
-          <p className="text-2xl font-bold text-red-500 mt-1">{formatCurrency(data.monthly_expenses, isPrivacyMode)}</p>
+          <p className="text-xl sm:text-2xl font-bold text-red-500 mt-1">{formatCurrency(data.monthly_expenses, isPrivacyMode)}</p>
         </div>
         <div className="bg-card p-5 rounded-2xl border border-border shadow-sm">
           <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Total Balance</p>
-          <p className="text-2xl font-bold text-emerald-500 mt-1">{formatCurrency(data.total_balance, isPrivacyMode)}</p>
+          <p className="text-xl sm:text-2xl font-bold text-emerald-500 mt-1">{formatCurrency(data.total_balance, isPrivacyMode)}</p>
         </div>
       </section>
 

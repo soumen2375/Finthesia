@@ -229,7 +229,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-8rem)] gap-6 lg:gap-8 animate-slam">
       {/* Settings Navigation Sidebar */}
-      <aside className="lg:w-64 flex-shrink-0">
+      <aside className="hidden lg:block lg:w-64 flex-shrink-0">
         <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden sticky top-6">
           <div className="p-6 pb-4 flex items-center space-x-3">
             <button
@@ -273,6 +273,34 @@ export default function SettingsPage() {
           </nav>
         </div>
       </aside>
+
+      {/* Mobile horizontal tab bar */}
+      <div className="lg:hidden overflow-x-auto hide-scrollbar -mx-4 px-4">
+        <div className="flex space-x-2 pb-4">
+          {sidebarLinks.map((link) => (
+            <button
+              key={link.id}
+              onClick={() => setActiveTab(link.id)}
+              className={cn(
+                "flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0",
+                activeTab === link.id
+                  ? "bg-primary/10 text-primary"
+                  : "bg-card border border-border text-text-muted hover:text-text-dark"
+              )}
+            >
+              <link.icon size={16} />
+              <span>{link.label}</span>
+            </button>
+          ))}
+          <button
+            onClick={signOut}
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 bg-card border border-border hover:bg-red-50 transition-all whitespace-nowrap shrink-0 dark:hover:bg-red-500/10"
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
 
       {/* Main Content Area */}
       <main className="flex-1 space-y-6">

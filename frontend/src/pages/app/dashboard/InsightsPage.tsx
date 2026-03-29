@@ -63,18 +63,18 @@ export default function InsightsPage() {
         ))}
       </div>
 
-      <section className="bg-text-dark rounded-[3rem] p-12 text-white relative overflow-hidden shadow-2xl">
+      <section className="bg-text-dark rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 md:p-12 text-white relative overflow-hidden shadow-2xl">
         <div className="relative z-10 max-w-lg space-y-8">
           <div className="flex items-center space-x-3">
             <div className="h-10 w-10 bg-secondary/20 text-secondary rounded-xl flex items-center justify-center shadow-inner">
               <Zap size={24} />
             </div>
-            <h3 className="text-3xl font-bold tracking-tight">What-If Simulator</h3>
+            <h3 className="text-xl sm:text-3xl font-bold tracking-tight">What-If Simulator</h3>
           </div>
           <p className="text-slate-400 leading-relaxed text-lg font-medium">
             See how your credit score and utilization change if you make a payment today or take a new loan.
           </p>
-          <button className="px-10 py-5 bg-secondary text-white rounded-[2.5rem] font-bold text-lg hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 active:scale-95">
+          <button className="px-6 py-3 sm:px-10 sm:py-5 bg-secondary text-white rounded-2xl sm:rounded-[2.5rem] font-bold text-base sm:text-lg hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 active:scale-95">
             Launch Simulator
           </button>
         </div>

@@ -64,7 +64,6 @@ const navGroups = [
     items: [
       { icon: Heart, label: 'Financial Health', path: '/financial-health' },
       { icon: Brain, label: 'Predictions', path: '/spending-predictions' },
-      { icon: BarChart3, label: 'Analytics', path: '/analytics' },
     ]
   },
   {
@@ -234,7 +233,7 @@ export default function AppLayout() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
           <div className="max-w-6xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.div
@@ -358,15 +357,15 @@ export default function AppLayout() {
                 key={item.path}
                 to={item.path as string}
                 className={({ isActive }) => cn(
-                  "flex flex-col items-center justify-center space-y-1 px-3 py-3 rounded-xl transition-all",
-                  isActive ? "text-primary bg-primary/10" : "text-text-muted hover:text-text-dark"
+                  "flex flex-col items-center justify-center gap-0.5 px-2 py-2 rounded-xl transition-all min-w-0",
+                  isActive ? "text-primary" : "text-text-muted hover:text-text-dark"
                 )}
                 title={item.label}
               >
                 {({ isActive }) => (
                   <>
-                    <item.icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="sr-only">{item.label}</span>
+                    <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                    <span className="text-[10px] font-bold truncate">{item.label}</span>
                   </>
                 )}
               </NavLink>

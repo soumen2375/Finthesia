@@ -114,6 +114,19 @@ export interface NetWorthSummary {
   netWorth: number;
 }
 
+export interface Budget {
+  id: string;
+  category: string;
+  limit_amount: number;
+  spent_amount: number;
+  color: string;
+  month: string;
+  year: number;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface BankAccount {
   id: string;
   user_id?: string;
@@ -666,6 +679,18 @@ export const api = {
     return data || [];
   },
 
+  async getAllEMIs(): Promise<EMI[]> {
+    const userId = await getUserId();
+    const { data, error } = await supabase
+      .from('emis')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('next_due_date', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
   async addEMI(emi: EMI): Promise<void> {
     const userId = await getUserId();
     const { error } = await supabase.rpc('add_emi_with_card_block', {
@@ -679,6 +704,15 @@ export const api = {
       p_remaining_months: emi.remaining_months,
       p_next_due_date: emi.next_due_date,
     });
+    if (error) throw new Error(error.message);
+  },
+
+  async updateEMI(id: string, updates: Partial<EMI>): Promise<void> {
+    const { error } = await supabase.from('emis')
+      .update({
+        ...updates,
+      })
+      .eq('id', id);
     if (error) throw new Error(error.message);
   },
 
@@ -1256,4 +1290,79 @@ export const api = {
       safe_to_spend_daily: Math.round(safeToSpendDaily),
     };
   },
+
+  // --- Budgets ---
+  async getBudgets(month: string, year: number): Promise<Budget[]> {
+    const userId = await getUserId();
+    const { data, error } = await supabase
+      .from('budgets')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('month', month)
+      .eq('year', year)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+    
+    if (error) throw new Error(error.message);
+
+    // Calculate dynamic spend based on transactions
+    const budgets = data || [];
+    
+    // Fetch transactions for the given month/year
+    // Note: transaction_date is stored as 'YYYY-MM-DD'
+    const prefix = `${year}-${month}`;
+    const { data: txData } = await supabase
+      .from('transactions')
+      .select('amount, category')
+      .eq('user_id', userId)
+      .eq('type', 'spend')
+      .like('transaction_date', `${prefix}%`)
+      .eq('is_active', true);
+
+    const spendMap: Record<string, number> = {};
+    if (txData) {
+      txData.forEach(tx => {
+        spendMap[tx.category] = (spendMap[tx.category] || 0) + Number(tx.amount);
+      });
+    }
+
+    return budgets.map(b => ({
+      ...b,
+      spent_amount: spendMap[b.category] || 0
+    }));
+  },
+
+  async addBudget(budget: Omit<Budget, 'id'>): Promise<void> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('budgets').insert({
+      id,
+      user_id: userId,
+      category: budget.category,
+      limit_amount: budget.limit_amount,
+      color: budget.color,
+      month: budget.month,
+      year: budget.year,
+      spent_amount: 0,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+  },
+
+  async updateBudget(id: string, updates: Partial<Budget>): Promise<void> {
+    const { error } = await supabase.from('budgets')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteBudget(id: string): Promise<void> {
+    const { error } = await supabase.from('budgets')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
 };

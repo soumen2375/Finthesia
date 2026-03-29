@@ -124,7 +124,7 @@ export default function LiabilitiesPage() {
     <div className="space-y-8 pb-12 font-sans tracking-tight">
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-red-600 via-rose-600 to-pink-700 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl animate-slam">
+      <section className="relative overflow-hidden bg-gradient-to-br from-red-600 via-rose-600 to-pink-700 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 text-white shadow-2xl animate-slam">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="space-y-4 flex-1">
             <div className="flex items-center space-x-3">
@@ -140,7 +140,7 @@ export default function LiabilitiesPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tighter">
                 {formatCurrency(totalLiabilities, isPrivacyMode)}
               </h1>
               <p className="text-white/60 text-sm font-medium">
@@ -367,7 +367,7 @@ export default function LiabilitiesPage() {
 
                               {/* Right side — Balance + Actions */}
                               <div className="flex items-center space-x-4 shrink-0">
-                                <p className="text-xl font-bold text-text-dark">{formatCurrency(lib.balance, isPrivacyMode)}</p>
+                                <p className="text-lg sm:text-xl font-bold text-text-dark">{formatCurrency(lib.balance, isPrivacyMode)}</p>
                                 <div className="flex items-center space-x-1">
                                    {isCardDebt(lib.id) ? (
                                      <span

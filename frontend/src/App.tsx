@@ -77,7 +77,6 @@ export default function App() {
                     <Route path="/cards" element={<CardsPage />} />
                     <Route path="/liabilities" element={<LiabilitiesPage />} />
                     <Route path="/assets" element={<AssetsPage />} />
-                    <Route path="/analytics" element={<AnalyticsPage />} />
                     <Route path="/budgets" element={<BudgetsPage />} />
                     <Route path="/bills" element={<BillsPage />} />
                     <Route path="/insights" element={<InsightsPage />} />

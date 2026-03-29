@@ -333,7 +333,7 @@ export default function CardsPage() {
                         rotate: isSelected ? 0 : (i - activeCardIndex) * 2
                       }}
                       className={cn(
-                        "absolute w-full max-w-[320px] aspect-[1.6/1] rounded-[2rem] p-7 text-white shadow-2xl cursor-pointer transition-shadow",
+                        "absolute w-full max-w-[280px] sm:max-w-[320px] aspect-[1.6/1] rounded-[2rem] p-5 sm:p-7 text-white shadow-2xl cursor-pointer transition-shadow",
                         card.color || 'bg-slate-900',
                         isSelected ? "shadow-secondary/20" : "shadow-none"
                       )}
@@ -351,7 +351,7 @@ export default function CardsPage() {
                           </div>
                         </div>
                         <div className="w-full flex justify-between items-end">
-                          <p className="text-xl font-mono tracking-widest">•••• •••• •••• {card.last4}</p>
+                          <p className="text-sm sm:text-xl font-mono tracking-widest">•••• •••• •••• {card.last4}</p>
                           <div className="h-8 w-12 bg-white/20 rounded-lg backdrop-blur-sm"></div>
                         </div>
                       </div>
@@ -370,14 +370,14 @@ export default function CardsPage() {
                     setIsDetailsOpen(true);
                   }}
                   className={cn(
-                    "card p-8 space-y-8 cursor-pointer group",
+                    "card p-4 sm:p-8 space-y-6 sm:space-y-8 cursor-pointer group",
                     isOverdue ? "border-danger/20 ring-4 ring-danger/5" : "hover:border-secondary/50"
                   )}
                 >
                   <div className="flex justify-between items-center">
                     <div className="space-y-1">
                       <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest">Available Credit</p>
-                      <h3 className="text-3xl font-bold text-text-dark">{formatCurrency(activeCard.available_credit, isPrivacyMode)}</h3>
+                      <h3 className="text-2xl sm:text-3xl font-bold text-text-dark">{formatCurrency(activeCard.available_credit, isPrivacyMode)}</h3>
                     </div>
                     <div className="text-right space-y-1">
                       <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest">Credit Limit</p>
@@ -414,7 +414,7 @@ export default function CardsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center space-x-4 p-5 bg-background rounded-2xl border border-border">
                       <div className={cn(
                         "h-10 w-10 rounded-xl flex items-center justify-center shadow-sm",

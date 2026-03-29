@@ -76,6 +76,45 @@
   }
 }
 
+/* Safe-area support for iOS PWA / notch devices */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Bottom-nav clearance for all pages (mobile) */
+.mobile-page-content {
+  padding-bottom: 6rem; /* clear bottom nav */
+}
+
+/* Smooth touch scrolling */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar for mobile drawers & modal bodies */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 100px;
+}
+
+/* Hide scrollbar on mobile horizontal scroll areas */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Slam-in animation */
 @keyframes slamIn {
   0% { transform: scale(1.1) translateY(20px); opacity: 0; }

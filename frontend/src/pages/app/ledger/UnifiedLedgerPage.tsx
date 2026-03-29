@@ -112,7 +112,7 @@ export default function UnifiedLedgerPage() {
   // If a specific party is selected, render the PartyDetailView entirely
   if (selectedParty) {
     return (
-      <div className="font-sans min-h-screen bg-slate-50 p-6 md:p-8">
+      <div className="font-sans min-h-screen bg-slate-50 p-3 sm:p-6 md:p-8">
         <PartyDetailView
           party={selectedParty}
           isPrivacyMode={isPrivacyMode}
@@ -205,13 +205,13 @@ export default function UnifiedLedgerPage() {
           
           <div className="flex items-center space-x-3 sm:space-x-5">
             <div className="hidden sm:flex items-center">
-              <button className="flex items-center space-x-2 bg-[#0f6466] text-white text-sm font-bold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
+              <button 
+                className="flex items-center space-x-2 bg-[#0f6466] text-white text-sm font-bold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+              >
                 <span>Switch Ledger</span>
                 <ChevronDown size={16} />
               </button>
             </div>
-            <button className="text-text-muted hover:text-text-dark transition-colors"><Bell size={20} strokeWidth={2} /></button>
-            <button className="text-text-muted hover:text-text-dark transition-colors hidden sm:block"><Settings size={20} strokeWidth={2} /></button>
             <button className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden border border-primary/20">
               {currentUser?.user_metadata?.avatar_url ? (
                 <img src={currentUser.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
@@ -222,7 +222,7 @@ export default function UnifiedLedgerPage() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-8 pb-24 lg:pb-8 relative">
           <div className="max-w-[1200px] mx-auto w-full">
             <AnimatePresence mode="wait">
               <motion.div
@@ -279,6 +279,29 @@ export default function UnifiedLedgerPage() {
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Tab Bar for Ledger */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-border px-2 py-1.5 pb-safe-area-inset-bottom">
+        <div className="flex items-center justify-around">
+          {TABS.slice(0, 5).map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as TabView)}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-lg transition-all min-w-0",
+                  isActive ? "text-primary" : "text-text-muted"
+                )}
+              >
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-[10px] font-bold truncate">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>

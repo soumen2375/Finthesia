@@ -184,22 +184,19 @@ export default function DashboardPage() {
         className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            Good morning <span className="text-slate-400 font-medium">Ashik</span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            Dashboard
           </h1>
           <p className="text-slate-500 text-lg font-medium tracking-tight mt-1">
-            Please review today's activity
+            Overview of your active finances
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="bg-white px-4 py-2.5 rounded-[1rem] text-sm font-semibold text-slate-700 shadow-sm border border-slate-100 flex items-center gap-2">
             <span className="text-slate-400">₹</span> {isPrivacyMode ? '***' : 'INR'}
           </div>
           <PDFImportButton onImported={triggerRefresh} className="!rounded-[1rem] bg-white border border-slate-100 shadow-sm hover:bg-slate-50 text-slate-600" />
-          <button className="bg-white p-2.5 rounded-[1rem] text-slate-500 shadow-sm border border-slate-100 hover:bg-slate-50 transition-colors">
-            <Bell size={18} />
-          </button>
-          <button className="bg-white px-4 py-2.5 rounded-[1rem] text-sm font-medium text-slate-600 shadow-sm border border-slate-100 flex items-center gap-2 hover:bg-slate-50 transition-colors">
+          <button className="hidden sm:flex bg-white px-4 py-2.5 rounded-[1rem] text-sm font-medium text-slate-600 shadow-sm border border-slate-100 items-center gap-2 hover:bg-slate-50 transition-colors">
             <Settings size={16} />
             Customise
           </button>
@@ -221,7 +218,7 @@ export default function DashboardPage() {
               <div className="inline-flex px-3 py-1 bg-white/10 rounded-full text-[11px] font-medium text-white/80 border border-white/10 mb-2">
                 Total Balance
               </div>
-              <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mt-2">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mt-2">
                 {formatCurrency(summary?.totalAssets || 0, isPrivacyMode)}
               </h2>
             </div>
@@ -246,7 +243,7 @@ export default function DashboardPage() {
               {mainAccount?.bank_name || 'Primary Checking'}
             </p>
           </div>
-          <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mt-8">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mt-8">
             {formatCurrency(mainAccount?.balance || summary?.totalAssets || 0, isPrivacyMode)}
           </h2>
         </div>
@@ -261,7 +258,7 @@ export default function DashboardPage() {
               {savingsAccount?.bank_name || 'Emergency Fund'}
             </p>
           </div>
-          <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mt-8 text-slate-900">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mt-8 text-slate-900">
             {formatCurrency(savingsAccount?.balance || (summary?.totalAssets ? summary.totalAssets * 0.3 : 0), isPrivacyMode)}
           </h2>
         </div>
@@ -419,26 +416,30 @@ export default function DashboardPage() {
               <thead>
                 <tr className="text-slate-400 text-xs uppercase tracking-wider font-semibold border-b border-slate-100">
                   <th className="pb-4 font-medium pl-2">Transactions</th>
-                  <th className="pb-4 font-medium">Category</th>
+                  <th className="pb-4 font-medium hidden sm:table-cell">Category</th>
                   <th className="pb-4 text-right font-medium pr-2">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {recentTransactions.slice(0, 4).map((tx, i) => (
                   <tr key={tx.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 flex items-center gap-4 pl-2">
+                      <td className="py-4 flex items-center gap-3 sm:gap-4 pl-2">
                       <div className={cn(
-                        "w-11 h-11 rounded-[0.9rem] flex items-center justify-center text-white shadow-sm font-bold text-lg",
+                        "w-10 h-10 sm:w-11 sm:h-11 rounded-[0.9rem] flex items-center justify-center text-white shadow-sm font-bold text-base sm:text-lg shrink-0",
                         tx.type === 'income' ? "bg-[#10b981]" : "bg-[#0f0f0f]"
                       )}>
                         {tx.merchant?.[0]?.toUpperCase() || tx.description[0]?.toUpperCase() || <CreditCard size={18} />}
                       </div>
-                      <div>
-                        <p className="font-bold text-slate-800 text-[15px]">{tx.merchant || tx.description}</p>
-                        <p className="text-[12px] text-slate-400 font-medium mt-0.5">{new Date(tx.transaction_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-800 text-sm sm:text-[15px] truncate">{tx.merchant || tx.description}</p>
+                        <p className="text-[11px] sm:text-[12px] text-slate-400 font-medium mt-0.5">{new Date(tx.transaction_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                        <span className="sm:hidden inline-flex items-center gap-1 mt-0.5 text-[11px] text-slate-500 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tx.type === 'income' ? '#10b981' : '#fde047' }}></span>
+                          {tx.category}
+                        </span>
                       </div>
                     </td>
-                    <td className="py-4">
+                    <td className="py-4 hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tx.type === 'income' ? '#10b981' : '#fde047' }}></span>
                         <span className="text-[14px] text-slate-600 font-medium">{tx.category}</span>

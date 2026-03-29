@@ -135,7 +135,7 @@ export default function NetWorthPage() {
       {/* Section 1: Total Net Worth Summary */}
       <section className="text-center space-y-3 animate-slam py-8">
         <p className="text-text-muted text-sm font-bold uppercase tracking-[0.2em]">Total Net Worth</p>
-        <h2 className="text-6xl font-black text-text-dark tracking-tight">
+        <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-text-dark tracking-tight">
           {formatCurrency(netWorth, isPrivacyMode)}
         </h2>
         <div className="flex items-center justify-center space-x-2">
@@ -168,7 +168,7 @@ export default function NetWorthPage() {
               <ChevronRight size={18} className="text-text-muted group-hover:text-secondary transition-colors" />
             </div>
             <p className="text-text-muted text-xs font-bold uppercase tracking-widest mb-1">Assets</p>
-            <h3 className="text-2xl font-bold text-text-dark">{formatCurrency(totalAssets, isPrivacyMode)}</h3>
+            <h3 className="text-xl sm:text-2xl font-bold text-text-dark">{formatCurrency(totalAssets, isPrivacyMode)}</h3>
             <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest mt-2">View Details →</p>
           </div>
         </Link>
@@ -182,7 +182,7 @@ export default function NetWorthPage() {
               <ChevronRight size={18} className="text-text-muted group-hover:text-danger transition-colors" />
             </div>
             <p className="text-text-muted text-xs font-bold uppercase tracking-widest mb-1">Liabilities</p>
-            <h3 className="text-2xl font-bold text-text-dark">{formatCurrency(totalLiabilities, isPrivacyMode)}</h3>
+            <h3 className="text-xl sm:text-2xl font-bold text-text-dark">{formatCurrency(totalLiabilities, isPrivacyMode)}</h3>
             <p className="text-text-muted text-[10px] font-bold uppercase tracking-widest mt-2">View Details →</p>
           </div>
         </Link>
@@ -195,14 +195,14 @@ export default function NetWorthPage() {
             <ChevronRight size={18} className="text-text-muted group-hover:text-text-dark transition-colors" />
           </div>
           <p className="text-text-muted text-xs font-bold uppercase tracking-widest mb-1">Investments</p>
-          <h3 className="text-2xl font-bold text-text-dark">{formatCurrency(totalInvestments, isPrivacyMode)}</h3>
+          <h3 className="text-xl sm:text-2xl font-bold text-text-dark">{formatCurrency(totalInvestments, isPrivacyMode)}</h3>
         </div>
       </section>
 
       {/* Section 3: Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Asset Allocation Chart */}
-        <section className="card p-8 space-y-6">
+        <section className="card p-4 sm:p-8 space-y-6">
           <div className="flex items-center space-x-3">
             <div className="h-10 w-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center">
               <PieChartIcon size={20} />

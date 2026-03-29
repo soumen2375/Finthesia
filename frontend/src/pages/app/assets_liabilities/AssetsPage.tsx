@@ -130,7 +130,7 @@ export default function AssetsPage() {
   return (
     <div className="space-y-8 pb-12 font-sans tracking-tight">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#27C4E1] via-[#1EB0CC] to-[#0EA5E9] rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl animate-slam">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#27C4E1] via-[#1EB0CC] to-[#0EA5E9] rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 text-white shadow-2xl animate-slam">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="space-y-4 flex-1">
             <div className="flex items-center space-x-3">
@@ -146,7 +146,7 @@ export default function AssetsPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tighter">
                 {formatCurrency(totalAssets, isPrivacyMode)}
               </h1>
               <p className="text-white/60 text-sm font-medium">
@@ -256,10 +256,10 @@ export default function AssetsPage() {
                                 <button onClick={() => setDeleteConfirm(null)} className="px-4 py-1.5 bg-background border border-border text-text-dark rounded-lg font-bold text-sm transition-colors">No</button>
                               </div>
                             )}
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-bold text-text-dark truncate">{asset.name}</p>
+                                  <p className="font-bold text-text-dark truncate text-sm sm:text-base">{asset.name}</p>
                                   {asset.subcategory && (
                                     <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-background border border-border text-text-muted shrink-0">
                                       {asset.subcategory}
@@ -270,8 +270,8 @@ export default function AssetsPage() {
                                   <p className="text-text-muted text-xs truncate">{asset.notes}</p>
                                 )}
                               </div>
-                              <div className="flex items-center space-x-4 shrink-0">
-                                <p className="text-xl font-bold text-text-dark">{formatCurrency(asset.current_value, isPrivacyMode)}</p>
+                              <div className="flex items-center space-x-4 shrink-0 self-end sm:self-auto">
+                                <p className="text-lg sm:text-xl font-bold text-text-dark">{formatCurrency(asset.current_value, isPrivacyMode)}</p>
                                  <div className="flex items-center space-x-1">
                                    {isBankAsset(asset.id) ? (
                                      <span

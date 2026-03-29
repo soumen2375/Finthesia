@@ -74,7 +74,7 @@ export default function BankAccountsPage() {
               Bank Accounts
             </div>
             <div className="space-y-1">
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tighter">
                 {formatCurrency(totalBalance, isPrivacyMode)}
               </h1>
               <p className="text-white/50 text-sm font-medium">

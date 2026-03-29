@@ -91,7 +91,7 @@ export default function SubscriptionsPage() {
   return (
     <div className="space-y-8 pb-12 font-sans tracking-tight">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-purple-600 to-indigo-700 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl animate-slam">
+      <section className="relative overflow-hidden bg-gradient-to-br from-purple-600 to-indigo-700 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 text-white shadow-2xl animate-slam">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-4">
             <div className="inline-flex items-center px-4 py-1.5 bg-white/20 text-white text-[10px] font-bold uppercase rounded-full tracking-widest">
@@ -99,7 +99,7 @@ export default function SubscriptionsPage() {
               Recurring Payments
             </div>
             <div className="space-y-1">
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter">
+              <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold tracking-tighter">
                 {formatCurrency(data?.total_monthly || 0, isPrivacyMode)}
               </h1>
               <p className="text-white/70 text-sm font-medium">Per month on subscriptions</p>
@@ -161,7 +161,7 @@ export default function SubscriptionsPage() {
               transition={{ delay: i * 0.05 }}
               className="bg-card p-6 rounded-2xl border border-border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center space-x-4">
                   <div className={cn(
                     "h-14 w-14 rounded-2xl flex items-center justify-center shrink-0",
@@ -194,7 +194,7 @@ export default function SubscriptionsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 self-end sm:self-auto">
                   <div className="text-right">
                     <p className="text-2xl font-bold text-text-dark tracking-tight">
                       {formatCurrency(sub.amount, isPrivacyMode)}
@@ -208,7 +208,7 @@ export default function SubscriptionsPage() {
                       id={`delete-sub-${sub.id}`}
                       disabled={deletingId === sub.id}
                       onClick={() => handleDelete(sub)}
-                      className="h-10 w-10 rounded-xl flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                      className="h-10 w-10 rounded-xl flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/10 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 disabled:opacity-50"
                     >
                       <Trash2 size={16} />
                     </button>

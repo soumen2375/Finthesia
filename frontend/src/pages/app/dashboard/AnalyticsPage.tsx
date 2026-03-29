@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-1 animate-slam">
         <div>
-          <h2 className="text-3xl font-bold text-text-dark tracking-tight">Analytics</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-text-dark tracking-tight">Analytics</h2>
           <p className="text-text-muted text-sm font-medium">Your financial health at a glance</p>
         </div>
         <Button variant="secondary" size="sm">
@@ -97,8 +97,8 @@ export default function AnalyticsPage() {
       ) : (
         <>
           {/* Financial Health Score */}
-          <section className="card p-8 flex flex-col items-center text-center space-y-4">
-            <div className="relative h-64 w-64 flex items-center justify-center">
+          <section className="card p-4 sm:p-8 flex flex-col items-center text-center space-y-4">
+            <div className="relative h-48 w-48 sm:h-64 sm:w-64 flex items-center justify-center">
               <svg className="h-full w-full transform -rotate-90">
                 <circle
                   cx="128"
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center space-y-1">
-                <span className="text-6xl font-black tracking-tight text-text-dark">{healthScore}</span>
+                <span className="text-4xl sm:text-6xl font-black tracking-tight text-text-dark">{healthScore}</span>
                 <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Health Score</span>
               </div>
             </div>

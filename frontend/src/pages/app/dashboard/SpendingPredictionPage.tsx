@@ -75,7 +75,7 @@ export default function SpendingPredictionPage() {
             </div>
             <div className="space-y-2">
               <p className="text-white/50 text-sm font-medium">Predicted spending for {data.predicted_month}</p>
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tighter">
                 {formatCurrency(data.predicted_total, isPrivacyMode)}
               </h1>
             </div>

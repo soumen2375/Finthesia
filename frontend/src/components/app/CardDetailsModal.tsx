@@ -190,9 +190,7 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
   const handleSaveEMI = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const emiData: EMI = {
-      id: editingEMI ? editingEMI.id : crypto.randomUUID(),
-      card_id: card.id,
+    const emiData: Partial<EMI> = {
       description: formData.get('description') as string,
       original_amount: Number(formData.get('original_amount')),
       remaining_amount: Number(formData.get('remaining_amount')),
@@ -201,8 +199,16 @@ export function CardDetailsModal({ isOpen, onClose, card, onUpdate }: CardDetail
       next_due_date: formData.get('next_due_date') as string,
     };
     try {
-      if (editingEMI) await api.deleteEMI(editingEMI.id);
-      await api.addEMI(emiData);
+      if (editingEMI) {
+        await api.updateEMI(editingEMI.id, emiData);
+      } else {
+        const fullEmiData: EMI = {
+          id: crypto.randomUUID(),
+          card_id: card.id,
+          ...emiData as any,
+        };
+        await api.addEMI(fullEmiData);
+      }
       showToast(editingEMI ? 'EMI updated' : 'EMI added', 'success');
       setIsAddingEMI(false);
       setEditingEMI(null);
