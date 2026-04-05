@@ -15,11 +15,12 @@ function generateId() {
 
 // ─── Types ───────────────────────────────────
 interface Party {
-  party_id: string;
+  id: string;
   user_id: string;
   name: string;
+  ledger_id?: string;
   phone?: string;
-  balance: number;   // from party_balances view
+  balance: number;
   total_gave: number;
   total_got: number;
 }
@@ -102,12 +103,13 @@ interface AddTxDrawerProps {
   open: boolean;
   partyId: string;
   partyName: string;
+  ledgerId?: string;
   defaultType: 'gave' | 'got';
   onClose: () => void;
   onSaved: () => void;
 }
 
-function AddTxDrawer({ open, partyId, partyName, defaultType, onClose, onSaved }: AddTxDrawerProps) {
+function AddTxDrawer({ open, partyId, partyName, ledgerId, defaultType, onClose, onSaved }: AddTxDrawerProps) {
   const [type, setType]     = useState<'gave'|'got'>(defaultType);
   const [amount, setAmount] = useState('');
   const [note, setNote]     = useState('');
@@ -125,8 +127,19 @@ function AddTxDrawer({ open, partyId, partyName, defaultType, onClose, onSaved }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
     const finalNote = note.trim() + (mode !== 'Cash' ? ` (via ${mode})` : '');
+    let targetLedgerId = ledgerId;
+    if (!targetLedgerId) {
+      const { data: ledgerData } = await supabase.from('ledgers').select('id').eq('user_id', user.id).eq('is_default', true).limit(1).single();
+      if (ledgerData) targetLedgerId = ledgerData.id;
+      else {
+        const { data: anyLedger } = await supabase.from('ledgers').select('id').eq('user_id', user.id).limit(1).single();
+        if (anyLedger) targetLedgerId = anyLedger.id;
+        else { setErr('No ledger found'); setSaving(false); return; }
+      }
+    }
+
     const { error } = await supabase.from('party_ledger_txns').insert({
-      id: generateId(), user_id: user.id,
+      id: generateId(), user_id: user.id, ledger_id: targetLedgerId,
       party_id: partyId, txn_type: type,
       amount: amt, note: finalNote.trim() || null, txn_date: date
     });
@@ -246,13 +259,13 @@ function PartyDetail({ party, onBack, onRefresh }: { party: Party; onBack: ()=>v
     setLoading(true);
     const { data } = await supabase
       .from('party_ledger_txns').select('*')
-      .eq('party_id', party.party_id)
+      .eq('party_id', party.id)
       .order('txn_date', { ascending: false });
     setTxns(data || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchTxns(); }, [party.party_id]);
+  useEffect(() => { fetchTxns(); }, [party.id]);
 
   const balance = txns.reduce((s,t) => s + (t.txn_type==='gave' ? Number(t.amount) : -Number(t.amount)), 0);
 
@@ -364,7 +377,8 @@ function PartyDetail({ party, onBack, onRefresh }: { party: Party; onBack: ()=>v
       )}
 
       <AddTxDrawer
-        open={drawerOpen} partyId={party.party_id} partyName={party.name}
+        open={drawerOpen} partyId={party.id} partyName={party.name}
+        ledgerId={party.ledger_id}
         defaultType={drawerType}
         onClose={()=>setDrawerOpen(false)}
         onSaved={()=>{ fetchTxns(); onRefresh(); }}
@@ -384,9 +398,8 @@ export default function PartyLedgerPage() {
 
   const fetchParties = async () => {
     setLoading(true);
-    // Use party_balances view
     const { data } = await supabase
-      .from('party_balances').select('*')
+      .from('party_ledger_parties').select('*')
       .order('name', { ascending: true });
     setParties(data || []);
     setLoading(false);
@@ -468,7 +481,7 @@ export default function PartyLedgerPage() {
       ) : (
         <div className="bg-card rounded-[2rem] border border-border shadow-xl overflow-hidden animate-slam" style={{animationDelay:'0.15s'}}>
           {filtered.map((party, idx) => (
-            <button key={party.party_id} onClick={()=>setSelectedParty(party)}
+            <button key={party.id} onClick={()=>setSelectedParty(party)}
               className={cn('w-full flex items-center justify-between px-5 py-4 hover:bg-background/50 transition-colors group text-left',
                 idx > 0 && 'border-t border-border'
               )}

@@ -12,8 +12,24 @@ interface Props {
 
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD'];
 
+const BANKS = [
+  "AU Small Finance Bank",
+  "Axis Bank",
+  "Federal Bank",
+  "HDFC Bank",
+  "ICICI Bank",
+  "IDFC FIRST Bank",
+  "IndusInd Bank",
+  "Kotak Mahindra Bank",
+  "RBL Bank",
+  "SBI Bank",
+  "Yes Bank",
+  "Other"
+];
+
 export function AddBankAccountModal({ isOpen, onClose, onSaved, editingBank }: Props) {
-  const [bankName, setBankName] = useState('');
+  const [selectedBank, setSelectedBank] = useState('');
+  const [customBank, setCustomBank] = useState('');
   const [accountType, setAccountType] = useState<'savings' | 'current' | 'credit_card'>('savings');
   const [nickname, setNickname] = useState('');
   const [balance, setBalance] = useState('');
@@ -25,14 +41,21 @@ export function AddBankAccountModal({ isOpen, onClose, onSaved, editingBank }: P
   // Populate form when editing
   React.useEffect(() => {
     if (editingBank) {
-      setBankName(editingBank.bank_name);
+      if (BANKS.includes(editingBank.bank_name)) {
+        setSelectedBank(editingBank.bank_name);
+        setCustomBank('');
+      } else {
+        setSelectedBank('Other');
+        setCustomBank(editingBank.bank_name);
+      }
       setAccountType(editingBank.account_type);
       setNickname(editingBank.nickname || '');
       setBalance(editingBank.balance.toString());
       setCurrency(editingBank.currency || 'INR');
       setNotes(editingBank.notes || '');
     } else {
-      setBankName('');
+      setSelectedBank('');
+      setCustomBank('');
       setAccountType('savings');
       setNickname('');
       setBalance('');
@@ -48,8 +71,9 @@ export function AddBankAccountModal({ isOpen, onClose, onSaved, editingBank }: P
     setIsSubmitting(true);
 
     try {
+      const finalBankName = selectedBank === 'Other' ? customBank : selectedBank;
       const data = {
-        bank_name: bankName.trim(),
+        bank_name: finalBankName.trim(),
         account_type: accountType,
         nickname: nickname.trim() || undefined,
         balance: parseFloat(balance),
@@ -113,16 +137,31 @@ export function AddBankAccountModal({ isOpen, onClose, onSaved, editingBank }: P
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-[11px] font-bold text-text-muted uppercase tracking-widest mb-2">Bank Name *</label>
-                  <input
-                    type="text"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="e.g., HDFC Bank"
-                    className="input-field"
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-text-muted uppercase tracking-widest flex items-center">
+                    <Landmark size={14} className="mr-2" /> Choose Bank Name *
+                  </label>
+                  <select 
+                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all text-text-dark"
+                    value={selectedBank}
+                    onChange={(e) => {
+                      setSelectedBank(e.target.value);
+                    }}
                     required
-                  />
+                  >
+                    <option value="">Select Bank</option>
+                    {BANKS.map(bank => <option key={bank} value={bank}>{bank}</option>)}
+                  </select>
+                  {selectedBank === "Other" && (
+                    <input
+                      type="text"
+                      placeholder="Enter Bank Name" 
+                      value={customBank} 
+                      onChange={(e) => setCustomBank(e.target.value)} 
+                      className="input-field mt-2"
+                      required 
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -197,7 +236,7 @@ export function AddBankAccountModal({ isOpen, onClose, onSaved, editingBank }: P
                 <div className="flex space-x-3 pt-2">
                   <button
                     type="submit"
-                    disabled={isSubmitting || !bankName.trim() || !balance}
+                    disabled={isSubmitting || !selectedBank || (selectedBank === 'Other' && !customBank.trim()) || !balance}
                     className="btn-primary flex-1 py-3 font-bold"
                   >
                     {isSubmitting ? 'Saving...' : editingBank ? 'Update Account' : 'Add Account'}

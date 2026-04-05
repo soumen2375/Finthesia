@@ -428,10 +428,10 @@ export default function DashboardPage() {
                         "w-10 h-10 sm:w-11 sm:h-11 rounded-[0.9rem] flex items-center justify-center text-white shadow-sm font-bold text-base sm:text-lg shrink-0",
                         tx.type === 'income' ? "bg-[#10b981]" : "bg-[#0f0f0f]"
                       )}>
-                        {tx.merchant?.[0]?.toUpperCase() || tx.description[0]?.toUpperCase() || <CreditCard size={18} />}
+                        {tx.merchant?.[0]?.toUpperCase() || tx.description?.[0]?.toUpperCase() || <CreditCard size={18} />}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-slate-800 text-sm sm:text-[15px] truncate">{tx.merchant || tx.description}</p>
+                        <p className="font-bold text-slate-800 text-sm sm:text-[15px] truncate">{tx.merchant || tx.description || 'Transaction'}</p>
                         <p className="text-[11px] sm:text-[12px] text-slate-400 font-medium mt-0.5">{new Date(tx.transaction_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                         <span className="sm:hidden inline-flex items-center gap-1 mt-0.5 text-[11px] text-slate-500 font-medium">
                           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tx.type === 'income' ? '#10b981' : '#fde047' }}></span>
@@ -446,12 +446,12 @@ export default function DashboardPage() {
                       </div>
                     </td>
                     <td className="py-4 text-right pr-2">
-                      <span className={cn(
-                        "font-bold text-[15px]",
-                        tx.type === 'income' ? "text-[#10b981]" : "text-slate-900"
-                      )}>
-                        {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, isPrivacyMode)}
-                      </span>
+                         <span className={cn(
+                           "font-bold text-[15px]",
+                           tx.type === 'income' ? "text-[#10b981]" : "text-slate-900"
+                         )}>
+                           {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, isPrivacyMode)}
+                         </span>
                     </td>
                   </tr>
                 ))}

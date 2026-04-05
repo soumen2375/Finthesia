@@ -235,76 +235,94 @@ export function AddLiabilityModal({ isOpen, onClose, onSaved, editingLiab }: Pro
                   </div>
                 </div>
 
-                {/* Card Linking — Only for credit cards */}
-                {liabilityType === 'credit_card' && cards.length > 0 && !editingLiab && (
+                {/* Card Linking — For credit cards */}
+                {liabilityType === 'credit_card' && !editingLiab && (
                   <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center space-x-2 text-blue-600">
                       <Link2 size={16} />
                       <span className="text-[11px] font-bold uppercase tracking-widest">Link to Card Stack</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => { setCardLinkMode('existing'); }}
-                        className={cn(
-                          "p-2.5 rounded-xl border-2 text-xs font-bold transition-all",
-                          cardLinkMode === 'existing'
-                            ? "border-blue-500 bg-blue-500/10 text-blue-600"
-                            : "border-border text-text-muted"
+
+                    {cards.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => { setCardLinkMode('existing'); }}
+                            className={cn(
+                              "p-2.5 rounded-xl border-2 text-xs font-bold transition-all",
+                              cardLinkMode === 'existing'
+                                ? "border-blue-500 bg-blue-500/10 text-blue-600"
+                                : "border-border text-text-muted"
+                            )}
+                          >
+                            Link Existing Card
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setCardLinkMode('new'); setSelectedCardId(''); }}
+                            className={cn(
+                              "p-2.5 rounded-xl border-2 text-xs font-bold transition-all",
+                              cardLinkMode === 'new'
+                                ? "border-blue-500 bg-blue-500/10 text-blue-600"
+                                : "border-border text-text-muted"
+                            )}
+                          >
+                            Create New Card
+                          </button>
+                        </div>
+                        {cardLinkMode === 'existing' && (
+                          <div className="space-y-2 mt-2">
+                            {cards.map(card => {
+                              const outstanding = (card.credit_limit || 0) - (card.available_credit || 0);
+                              return (
+                                <button
+                                  key={card.id}
+                                  type="button"
+                                  onClick={() => handleCardSelect(card.id)}
+                                  className={cn(
+                                    "w-full p-3 rounded-xl border-2 text-left transition-all flex items-center space-x-3",
+                                    selectedCardId === card.id
+                                      ? "border-blue-500 bg-blue-500/5"
+                                      : "border-border hover:border-blue-500/50"
+                                  )}
+                                >
+                                  <div className="h-8 w-8 bg-gradient-to-br from-[#27C4E1] to-[#1EB0CC] rounded-lg flex items-center justify-center">
+                                    <CreditCardIcon size={14} className="text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-text-dark truncate">{card.bank_name} {card.card_variant}</p>
+                                    <p className="text-[10px] text-text-muted">Outstanding: {formatCurrency(outstanding, false)}</p>
+                                  </div>
+                                  {selectedCardId === card.id && (
+                                    <div className="h-5 w-5 bg-blue-500 rounded-full flex items-center justify-center">
+                                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
                         )}
-                      >
-                        Link Existing Card
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setCardLinkMode('new'); setSelectedCardId(''); }}
-                        className={cn(
-                          "p-2.5 rounded-xl border-2 text-xs font-bold transition-all",
-                          cardLinkMode === 'new'
-                            ? "border-blue-500 bg-blue-500/10 text-blue-600"
-                            : "border-border text-text-muted"
+                        {cardLinkMode === 'new' && (
+                          <p className="text-[10px] text-blue-600/60 font-medium">
+                            A new card will be automatically created in your Card Stack when you save this liability.
+                          </p>
                         )}
-                      >
-                        Create New Card
-                      </button>
-                    </div>
-                    {cardLinkMode === 'existing' && (
-                      <div className="space-y-2 mt-2">
-                        {cards.map(card => {
-                          const outstanding = (card.credit_limit || 0) - (card.available_credit || 0);
-                          return (
-                            <button
-                              key={card.id}
-                              type="button"
-                              onClick={() => handleCardSelect(card.id)}
-                              className={cn(
-                                "w-full p-3 rounded-xl border-2 text-left transition-all flex items-center space-x-3",
-                                selectedCardId === card.id
-                                  ? "border-blue-500 bg-blue-500/5"
-                                  : "border-border hover:border-blue-500/50"
-                              )}
-                            >
-                              <div className="h-8 w-8 bg-gradient-to-br from-[#27C4E1] to-[#1EB0CC] rounded-lg flex items-center justify-center">
-                                <CreditCardIcon size={14} className="text-white" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-text-dark truncate">{card.bank_name} {card.card_variant}</p>
-                                <p className="text-[10px] text-text-muted">Outstanding: {formatCurrency(outstanding, false)}</p>
-                              </div>
-                              {selectedCardId === card.id && (
-                                <div className="h-5 w-5 bg-blue-500 rounded-full flex items-center justify-center">
-                                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
+                      </>
+                    ) : (
+                      /* No cards exist — show inline card creation notice */
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                          <CreditCardIcon size={16} className="text-amber-600 shrink-0" />
+                          <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+                            No credit cards found. A new card will be automatically created in your Card Stack when you save this liability.
+                          </p>
+                        </div>
+                        <p className="text-[10px] text-blue-600/60 font-medium">
+                          Fill in the card details below (Name, Provider, Credit Limit) and the card will be auto-created.
+                        </p>
                       </div>
-                    )}
-                    {cardLinkMode === 'new' && (
-                      <p className="text-[10px] text-blue-600/60 font-medium">
-                        A new card will be automatically created in your Card Stack when you save this liability.
-                      </p>
                     )}
                   </div>
                 )}

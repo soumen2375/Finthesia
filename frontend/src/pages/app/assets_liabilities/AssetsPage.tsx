@@ -11,11 +11,9 @@ import {
   Plus, Pencil, Trash2, ArrowLeft,
   PieChart as PieChartIcon, ChevronDown, ChevronUp, TrendingUp
 } from 'lucide-react';
-import {
-  PieChart, Pie, Cell, ResponsiveContainer,
-  Tooltip as RechartsTooltip
-} from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { AddAssetModal } from '@/components/app/AddAssetModal';
+import { AddBankAccountModal } from '@/components/app/AddBankAccountModal';
 
 export const ASSET_CATEGORIES = [
   {
@@ -55,6 +53,7 @@ export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -76,6 +75,21 @@ export default function AssetsPage() {
   // Bank-injected assets (id starts with 'bank-asset-') are virtual — they
   // are derived from the banks table and cannot be deleted here.
   const isBankAsset = (id: string) => id.startsWith('bank-asset-');
+
+  // System-managed assets (auto-synced from Ledger triggers) cannot be manually edited
+  const isSystemManaged = (asset: Asset) => {
+    return (
+      (asset.name === 'Cash Wallet' && asset.notes?.includes('Auto-managed')) ||
+      (asset.name === 'Party Receivables' && asset.notes?.includes('Auto-managed'))
+    );
+  };
+
+  const handleBankAssetClick = (id: string) => {
+    if (isBankAsset(id)) {
+      const realBankId = id.replace('bank-asset-', '');
+      navigate(`/banks/${realBankId}`);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (isBankAsset(id)) {
@@ -274,30 +288,39 @@ export default function AssetsPage() {
                                 <p className="text-lg sm:text-xl font-bold text-text-dark">{formatCurrency(asset.current_value, isPrivacyMode)}</p>
                                  <div className="flex items-center space-x-1">
                                    {isBankAsset(asset.id) ? (
-                                     <span
-                                       className="px-2 py-1.5 rounded-lg bg-background border border-border text-[9px] font-bold text-text-muted uppercase tracking-widest cursor-default select-none"
-                                       title="Managed via Bank Accounts"
-                                     >
-                                       Auto
-                                     </span>
-                                   ) : (
-                                     <>
-                                       <button
-                                         onClick={() => { setEditingAsset(asset); setIsModalOpen(true); }}
-                                         className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-text-dark transition-colors"
-                                         title="Edit"
-                                       >
-                                         <Pencil size={14} />
-                                       </button>
-                                       <button
-                                         onClick={() => setDeleteConfirm(asset.id)}
-                                         className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-red-500 transition-colors"
-                                         title="Delete"
-                                       >
-                                         <Trash2 size={14} />
-                                       </button>
-                                     </>
-                                   )}
+                                      <button
+                                        onClick={() => handleBankAssetClick(asset.id)}
+                                        className="px-3 py-1.5 rounded-lg bg-[#27C4E1]/10 text-[#27C4E1] border border-[#27C4E1]/20 text-[10px] font-bold uppercase tracking-widest hover:bg-[#27C4E1]/20 transition-colors flex items-center space-x-1"
+                                        title="View Bank Transactions"
+                                      >
+                                        <span>View Bank</span>
+                                      </button>
+                                    ) : isSystemManaged(asset) ? (
+                                      <button
+                                        onClick={() => navigate('/ledger')}
+                                        className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 transition-colors flex items-center space-x-1"
+                                        title="Managed via Ledger"
+                                      >
+                                        <span>View Ledger</span>
+                                      </button>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() => { setEditingAsset(asset); setIsModalOpen(true); }}
+                                          className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-text-dark transition-colors"
+                                          title="Edit"
+                                        >
+                                          <Pencil size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => setDeleteConfirm(asset.id)}
+                                          className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-red-500 transition-colors"
+                                          title="Delete"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </>
+                                    )}
                                  </div>
                               </div>
                             </div>
@@ -339,6 +362,17 @@ export default function AssetsPage() {
         onClose={() => { setIsModalOpen(false); setEditingAsset(null); }}
         onSaved={fetchData}
         editingAsset={editingAsset}
+        onSwitchToBankModal={() => {
+          setIsModalOpen(false);
+          setIsBankModalOpen(true);
+        }}
+      />
+      
+      <AddBankAccountModal
+        isOpen={isBankModalOpen}
+        onClose={() => setIsBankModalOpen(false)}
+        onSaved={fetchData}
+        editingBank={null}
       />
     </div>
   );

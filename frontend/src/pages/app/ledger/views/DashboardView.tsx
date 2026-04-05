@@ -12,10 +12,11 @@ interface DashboardViewProps {
   isPrivacyMode: boolean;
   onAddParty: () => void;
   onSelectParty: (party: PartyInfo) => void;
+  onNavigateToParties?: (filter: 'give' | 'get') => void;
 }
 
 export default function DashboardView({
-  cashEntries, parties, isLoading, isPrivacyMode, onAddParty, onSelectParty
+  cashEntries, parties, isLoading, isPrivacyMode, onAddParty, onSelectParty, onNavigateToParties
 }: DashboardViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,7 +46,7 @@ export default function DashboardView({
       {/* Summary Bento Row (3 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Balance Card */}
-        <div className="bg-[#0f6466] p-7 rounded-2xl shadow-xl shadow-primary/10 relative overflow-hidden group">
+        <div className="bg-primary p-7 rounded-2xl shadow-xl shadow-primary/10 relative overflow-hidden group">
           <div className="absolute -right-10 -bottom-10 opacity-10 text-white">
             <svg width="180" height="180" viewBox="0 0 24 24" fill="currentColor">
               <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
@@ -66,64 +67,64 @@ export default function DashboardView({
         </div>
 
         {/* You Will Give */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div className="bg-card p-6 rounded-2xl shadow-sm border border-border flex flex-col justify-between hover:shadow-md transition-shadow">
           <div>
             <p className="text-text-muted text-[11px] font-bold uppercase tracking-wider mb-1">You Will Give</p>
-            <h3 className="text-[#de3b40] text-3xl font-extrabold font-headline tracking-tight mt-1">
+            <h3 className="text-danger text-3xl font-extrabold font-headline tracking-tight mt-1">
               {formatCurrency(totals.willGive, isPrivacyMode)}
             </h3>
           </div>
           <div className="flex items-center justify-between mt-8">
             <div className="flex -space-x-2">
               {willGiveParties.slice(0, 3).map((p, i) => (
-                <div key={p.party_id} className="w-8 h-8 rounded-full border-2 border-white bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white z-10" style={{ zIndex: 3 - i }}>
+                <div key={p.id} className="w-8 h-8 rounded-full border-2 border-card bg-text-dark flex items-center justify-center text-[10px] font-bold text-white z-10" style={{ zIndex: 3 - i }}>
                   {getInitials(p.name)}
                 </div>
               ))}
               {willGiveParties.length > 3 && (
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-text-muted z-0">
+                <div className="w-8 h-8 rounded-full border-2 border-card bg-background flex items-center justify-center text-[10px] font-bold text-text-muted z-0">
                   {"+"}{willGiveParties.length - 3}
                 </div>
               )}
               {willGiveParties.length === 0 && (
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-slate-300">
+                <div className="w-8 h-8 rounded-full border-2 border-card bg-background flex items-center justify-center text-text-muted">
                   -
                 </div>
               )}
             </div>
-            <button className="text-[#0f6466] text-xs font-bold flex items-center gap-1 hover:underline">
+            <button onClick={() => onNavigateToParties?.('give')} className="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
               View All <ChevronRight size={14} strokeWidth={3} />
             </button>
           </div>
         </div>
 
         {/* You Will Get */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div className="bg-card p-6 rounded-2xl shadow-sm border border-border flex flex-col justify-between hover:shadow-md transition-shadow">
           <div>
             <p className="text-text-muted text-[11px] font-bold uppercase tracking-wider mb-1">You Will Get</p>
-            <h3 className="text-[#0f6466] text-3xl font-extrabold font-headline tracking-tight mt-1">
+            <h3 className="text-primary text-3xl font-extrabold font-headline tracking-tight mt-1">
               {formatCurrency(totals.willGet, isPrivacyMode)}
             </h3>
           </div>
           <div className="flex items-center justify-between mt-8">
             <div className="flex -space-x-2">
               {willGetParties.slice(0, 3).map((p, i) => (
-                <div key={p.party_id} className="w-8 h-8 rounded-full border-2 border-white bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white z-10" style={{ zIndex: 3 - i }}>
+                <div key={p.id} className="w-8 h-8 rounded-full border-2 border-card bg-text-dark flex items-center justify-center text-[10px] font-bold text-white z-10" style={{ zIndex: 3 - i }}>
                   {getInitials(p.name)}
                 </div>
               ))}
               {willGetParties.length > 3 && (
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-text-muted z-0">
+                <div className="w-8 h-8 rounded-full border-2 border-card bg-background flex items-center justify-center text-[10px] font-bold text-text-muted z-0">
                   {"+"}{willGetParties.length - 3}
                 </div>
               )}
               {willGetParties.length === 0 && (
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-slate-300">
+                <div className="w-8 h-8 rounded-full border-2 border-card bg-background flex items-center justify-center text-text-muted">
                   -
                 </div>
               )}
             </div>
-            <button className="text-[#0f6466] text-xs font-bold flex items-center gap-1 hover:underline">
+            <button onClick={() => onNavigateToParties?.('get')} className="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
               View All <ChevronRight size={14} strokeWidth={3} />
             </button>
           </div>
@@ -131,7 +132,7 @@ export default function DashboardView({
       </div>
 
       {/* List Section */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-8">
+      <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden mt-8">
         {/* Header */}
         <div className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border">
           <div>
@@ -143,13 +144,13 @@ export default function DashboardView({
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search party name..."
-                className="bg-slate-50 border border-transparent hover:border-border rounded-lg py-2 pl-9 pr-4 text-sm w-48 sm:w-64 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white transition-all"
+                className="bg-background border border-border hover:border-border rounded-lg py-2 pl-9 pr-4 text-sm text-text-dark w-48 sm:w-64 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-card transition-all"
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-lg text-sm font-bold text-text-dark hover:bg-slate-200 transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 bg-background rounded-lg text-sm font-bold text-text-dark hover:bg-border/30 transition-colors">
               <SlidersHorizontal size={14} /> Filter
             </button>
-            <button onClick={onAddParty} className="flex items-center gap-2 px-4 py-2 bg-[#0fbcd4] text-white rounded-lg text-sm font-bold hover:bg-[#0daabf] transition-colors shadow-sm shadow-[#0fbcd4]/20">
+            <button onClick={onAddParty} className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg text-sm font-bold hover:opacity-90 transition-colors shadow-sm shadow-secondary/20">
               <UserPlus size={16} /> Add Customer
             </button>
           </div>
@@ -157,24 +158,24 @@ export default function DashboardView({
 
         {/* Party Rows */}
         {isLoading ? (
-          <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0fbcd4]" /></div>
+          <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary" /></div>
         ) : filteredParties.length === 0 ? (
           <div className="p-12 text-center text-text-muted text-sm font-medium">No parties found matching your search.</div>
         ) : (
           <div className="divide-y divide-border">
             {filteredParties.map((party, idx) => (
-              <div key={party.party_id} onClick={() => onSelectParty(party)}
-                className="p-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer gap-4 group">
+              <div key={party.id} onClick={() => onSelectParty(party)}
+                className="p-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-background transition-colors cursor-pointer gap-4 group">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-border">
-                    <div className="w-full h-full bg-slate-800 flex items-center justify-center text-lg font-bold text-white uppercase">
+                    <div className="w-full h-full bg-text-dark flex items-center justify-center text-lg font-bold text-white uppercase">
                       {getInitials(party.name)}
                     </div>
                   </div>
                   <div className="flex flex-col">
                     <h5 className="text-[15px] font-bold text-text-dark">{party.name}</h5>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      {idx === 0 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
+                      {idx === 0 && <span className="w-1.5 h-1.5 rounded-full bg-success"></span>}
                       <p className="text-xs text-text-muted font-medium">
                         {idx === 0 ? "Last active 2 hrs ago" : 
                          idx === 1 ? "Last active Yesterday" : 
@@ -188,11 +189,11 @@ export default function DashboardView({
                 <div className="flex items-center justify-between sm:justify-end gap-6 pl-16 sm:pl-0">
                   <p className={cn(
                     "text-lg font-bold font-headline",
-                    party.balance < 0 ? "text-[#de3b40]" : "text-[#0f6466]"
+                    party.balance < 0 ? "text-danger" : "text-primary"
                   )}>
                     {formatCurrency(Math.abs(party.balance), isPrivacyMode)}
                   </p>
-                  <ChevronRight size={18} className="text-slate-300 group-hover:text-text-dark transition-colors" />
+                  <ChevronRight size={18} className="text-text-muted/40 group-hover:text-text-dark transition-colors" />
                 </div>
               </div>
             ))}
@@ -200,8 +201,8 @@ export default function DashboardView({
         )}
         
         {filteredParties.length > 0 && (
-          <div className="py-4 bg-slate-50/50 flex items-center justify-center border-t border-border mt-2">
-            <button className="text-sm font-bold text-[#0f6466] hover:opacity-80 transition-opacity flex items-center gap-1">
+          <div className="py-4 bg-background/50 flex items-center justify-center border-t border-border mt-2">
+            <button onClick={() => onNavigateToParties?.('all' as any)} className="text-sm font-bold text-primary hover:opacity-80 transition-opacity flex items-center gap-1">
               View All Parties <ChevronDown size={14} strokeWidth={3} />
             </button>
           </div>

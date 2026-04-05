@@ -10,11 +10,12 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   editingAsset: Asset | null;
+  onSwitchToBankModal?: () => void;
 }
 
-export function AddAssetModal({ isOpen, onClose, onSaved, editingAsset }: Props) {
+export function AddAssetModal({ isOpen, onClose, onSaved, editingAsset, onSwitchToBankModal }: Props) {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('bank_accounts');
+  const [category, setCategory] = useState('investments');
   const [subcategory, setSubcategory] = useState('');
   const [currentValue, setCurrentValue] = useState('');
   const [notes, setNotes] = useState('');
@@ -30,7 +31,7 @@ export function AddAssetModal({ isOpen, onClose, onSaved, editingAsset }: Props)
       setNotes(editingAsset.notes || '');
     } else {
       setName('');
-      setCategory('bank_accounts');
+      setCategory('investments');
       setSubcategory('');
       setCurrentValue('');
       setNotes('');
@@ -118,7 +119,19 @@ export function AddAssetModal({ isOpen, onClose, onSaved, editingAsset }: Props)
                       <button
                         key={cat.id}
                         type="button"
-                        onClick={() => { setCategory(cat.id); setSubcategory(''); }}
+                        onClick={() => { 
+                          if (cat.id === 'bank_accounts') {
+                            if (onSwitchToBankModal) {
+                              onSwitchToBankModal();
+                            } else {
+                              setCategory(cat.id);
+                              setSubcategory('');
+                            }
+                          } else {
+                            setCategory(cat.id); 
+                            setSubcategory(''); 
+                          }
+                        }}
                         className={cn(
                           "p-2.5 rounded-xl border-2 text-xs font-bold transition-all flex items-center space-x-2",
                           category === cat.id

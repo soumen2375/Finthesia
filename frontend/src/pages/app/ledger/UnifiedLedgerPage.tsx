@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useUI } from '@/context/UIContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/context/ToastContext';
 import { 
   ArrowLeft, Users, LayoutDashboard, ScrollText, BarChart3, 
-  Settings, Menu, X, Plus, Bell, ChevronDown, HelpCircle, LogOut,
-  Search, FileText
+  Settings, Menu, X, Plus, ChevronDown, HelpCircle, LogOut,
+  Search, FileText, Moon, Sun, Eye, EyeOff, BookOpen, Check
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -22,9 +22,10 @@ import AddPartyModal from './components/AddPartyModal';
 import PartyDetailView from './components/PartyDetailView';
 import CreateLedgerModal from './components/CreateLedgerModal';
 
-import type { CashEntry, PartyInfo } from './types';
+import type { CashEntry, PartyInfo, Ledger } from './types';
 
 type TabView = 'dashboard' | 'parties' | 'reports' | 'transactions' | 'cashbook' | 'settings';
+type PartiesFilter = 'all' | 'give' | 'get';
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -36,14 +37,26 @@ const TABS = [
 ] as const;
 
 export default function UnifiedLedgerPage() {
-  const { isPrivacyMode, refreshKey } = useUI();
+  const { isPrivacyMode, togglePrivacyMode, isDarkMode, toggleDarkMode, refreshKey } = useUI();
   const { currentUser, signOut } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<TabView>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Parties filter from dashboard navigation (Issue 4c)
+  const [partiesFilter, setPartiesFilter] = useState<PartiesFilter>('all');
+
+  // Switch Ledger dropdown state (Issue 4a)
+  const [showLedgerDropdown, setShowLedgerDropdown] = useState(false);
+  const ledgerDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Ledger States
+  const [ledgers, setLedgers] = useState<Ledger[]>([]);
+  const [activeLedger, setActiveLedger] = useState<Ledger | null>(null);
 
   // Data
   const [cashEntries, setCashEntries] = useState<CashEntry[]>([]);
@@ -56,8 +69,29 @@ export default function UnifiedLedgerPage() {
   const [txModalPartyId, setTxModalPartyId] = useState('');
   
   const [showAddParty, setShowAddParty] = useState(false);
+  const [addPartyType, setAddPartyType] = useState<'customer' | 'vendor'>('customer');
   const [showCreateLedger, setShowCreateLedger] = useState(false);
   const [selectedParty, setSelectedParty] = useState<PartyInfo | null>(null);
+
+  // Handle URL params for navigation from main dashboard (Issue 4c)
+  useEffect(() => {
+    const filter = searchParams.get('filter');
+    if (filter === 'give' || filter === 'get') {
+      setActiveTab('parties');
+      setPartiesFilter(filter);
+    }
+  }, [searchParams]);
+
+  // Close ledger dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ledgerDropdownRef.current && !ledgerDropdownRef.current.contains(e.target as Node)) {
+        setShowLedgerDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Data Fetching
   const fetchData = async () => {
@@ -65,7 +99,30 @@ export default function UnifiedLedgerPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Fetch last 30 days for now, could be dynamic per view later
+    let currentLedgerId = activeLedger?.id;
+    
+    // Fetch ledgers
+    const { data: ledgerData } = await supabase.from('ledgers').select('*').eq('user_id', user.id).order('created_at');
+    
+    if (ledgerData && ledgerData.length > 0) {
+      setLedgers(ledgerData);
+      if (!currentLedgerId || !ledgerData.find(l => l.id === currentLedgerId)) {
+        const def = ledgerData.find(l => l.is_default) || ledgerData[0];
+        currentLedgerId = def.id;
+        setActiveLedger(def);
+      }
+    } else {
+      // Fallback: forcefully create ledger for accounts generated prior to migration
+      const fallbackId = crypto.randomUUID();
+      await supabase.from('ledgers').insert({
+        id: fallbackId, user_id: user.id, name: 'My Personal Ledger', description: 'Your default personal ledger', is_default: true, is_active: true
+      });
+      const newL = { id: fallbackId, name: 'My Personal Ledger', is_default: true, user_id: user.id };
+      setLedgers([newL]);
+      currentLedgerId = fallbackId;
+      setActiveLedger(newL);
+    }
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const startDate = thirtyDaysAgo.toISOString().split('T')[0];
@@ -73,11 +130,13 @@ export default function UnifiedLedgerPage() {
     const [cRes, pRes] = await Promise.all([
       supabase.from('cashbook_entries').select('*')
         .eq('user_id', user.id)
+        .eq('ledger_id', currentLedgerId)
         .gte('entry_date', startDate)
         .order('entry_date', { ascending: false })
         .order('created_at', { ascending: false }),
-      supabase.from('party_balances').select('*')
+      supabase.from('party_ledger_parties').select('*')
         .eq('user_id', user.id)
+        .eq('ledger_id', currentLedgerId)
         .order('name')
     ]);
 
@@ -86,7 +145,7 @@ export default function UnifiedLedgerPage() {
     setIsLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [refreshKey]);
+  useEffect(() => { fetchData(); }, [refreshKey, activeLedger?.id]);
 
   // Actions
   const openCashModal = (type: 'cash_in' | 'cash_out') => {
@@ -104,6 +163,18 @@ export default function UnifiedLedgerPage() {
     fetchData();
   };
 
+  // Issue 4c: Navigate from Dashboard "View All" to Parties with filter
+  const handleNavigateToParties = (filter: 'give' | 'get') => {
+    setPartiesFilter(filter);
+    setActiveTab('parties');
+  };
+
+  // Issue 4e/4f: Open Add Party with correct type
+  const handleOpenAddParty = (type?: 'customer' | 'vendor') => {
+    setAddPartyType(type || 'customer');
+    setShowAddParty(true);
+  };
+
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -112,26 +183,27 @@ export default function UnifiedLedgerPage() {
   // If a specific party is selected, render the PartyDetailView entirely
   if (selectedParty) {
     return (
-      <div className="font-sans min-h-screen bg-slate-50 p-3 sm:p-6 md:p-8">
+      <div className="font-sans min-h-screen bg-background p-3 sm:p-6 md:p-8">
         <PartyDetailView
           party={selectedParty}
           isPrivacyMode={isPrivacyMode}
           onBack={() => { setSelectedParty(null); fetchData(); }}
-          onAddTransaction={(type) => openPartyTxModal(selectedParty.party_id, type)}
+          onAddTransaction={(type) => openPartyTxModal(selectedParty.id, type)}
           onRefresh={fetchData}
         />
         <AddUnifiedTransactionModal
           open={showTxModal} onClose={() => setShowTxModal(false)} onSaved={() => { fetchData(); setShowTxModal(false); }}
           parties={parties} defaultMode={txModalMode} defaultType={txModalType} defaultPartyId={txModalPartyId}
+          ledgerId={activeLedger?.id}
         />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans tracking-tight">
+    <div className="min-h-screen bg-background flex font-sans tracking-tight">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 bg-white border-r border-border flex-col sticky top-0 h-screen z-40">
+      <aside className="hidden lg:flex w-64 bg-card border-r border-border flex-col sticky top-0 h-screen z-40">
         <div className="px-6 py-6 pb-2">
           <div className="flex flex-col text-left">
             <span className="text-2xl font-bold font-headline"><span className="text-text-dark">fin</span><span className="text-primary">thesia</span></span>
@@ -140,7 +212,7 @@ export default function UnifiedLedgerPage() {
         </div>
         
         <div className="px-5 py-4 mt-2">
-          <button onClick={() => navigate('/dashboard')} className="flex items-center space-x-2 w-full px-4 py-2.5 bg-[#eaf8fa] text-primary focus:bg-[#d8f4f6] hover:bg-[#d8f4f6] rounded-xl text-sm font-bold transition-colors">
+          <button onClick={() => navigate('/dashboard')} className="flex items-center space-x-2 w-full px-4 py-2.5 bg-primary/10 text-primary focus:bg-primary/15 hover:bg-primary/15 rounded-xl text-sm font-bold transition-colors">
             <ArrowLeft size={16} />
             <span>Back to Main Dashboard</span>
           </button>
@@ -153,12 +225,12 @@ export default function UnifiedLedgerPage() {
             return (
               <button 
                 key={tab.id} 
-                onClick={() => setActiveTab(tab.id as TabView)}
+                onClick={() => { setActiveTab(tab.id as TabView); if (tab.id !== 'parties') setPartiesFilter('all'); }}
                 className={cn(
                   "flex items-center w-full space-x-3 px-6 py-3.5 transition-all duration-200 text-[15px] border-l-4",
                   isActive 
-                    ? "bg-[#f0fafa] text-primary border-primary font-bold"
-                    : "text-text-muted border-transparent hover:bg-slate-50 hover:text-text-dark font-medium"
+                    ? "bg-primary/10 text-primary border-primary font-bold"
+                    : "text-text-muted border-transparent hover:bg-background hover:text-text-dark font-medium"
                 )}>
                 <Icon size={20} strokeWidth={isActive ? 2.5 : 2} /> 
                 <span>{tab.label}</span>
@@ -168,16 +240,16 @@ export default function UnifiedLedgerPage() {
         </nav>
         
         <div className="p-5 space-y-2 border-t border-border">
-          <button onClick={() => setShowCreateLedger(true)} className="w-full py-3 bg-[#0f6466] text-white rounded-xl font-bold text-sm shadow-md shadow-primary/20 hover:opacity-90 transition-colors flex items-center justify-center space-x-2">
+          <button onClick={() => setShowCreateLedger(true)} className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-md shadow-primary/20 hover:opacity-90 transition-colors flex items-center justify-center space-x-2">
             <Plus size={18} />
             <span>New Ledger</span>
           </button>
           <div className="grid grid-cols-2 gap-2 mt-4">
-             <button className="flex items-center justify-center space-x-2 px-3 py-2 text-text-muted hover:text-text-dark hover:bg-slate-50 rounded-lg transition-colors text-xs font-medium">
+             <button className="flex items-center justify-center space-x-2 px-3 py-2 text-text-muted hover:text-text-dark hover:bg-background rounded-lg transition-colors text-xs font-medium">
                <HelpCircle size={16} />
                <span>Help</span>
              </button>
-             <button onClick={signOut} className="flex items-center justify-center space-x-2 px-3 py-2 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium">
+             <button onClick={signOut} className="flex items-center justify-center space-x-2 px-3 py-2 text-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors text-xs font-medium">
                <LogOut size={16} />
                <span>Sign Out</span>
              </button>
@@ -187,11 +259,11 @@ export default function UnifiedLedgerPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 bg-white border-b border-border px-4 md:px-8 py-3 w-full flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-card border-b border-border px-4 md:px-8 py-3 w-full flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1 md:flex-none">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 rounded-xl text-text-muted hover:bg-slate-100 transition-colors"
+              className="lg:hidden p-2 -ml-2 rounded-xl text-text-muted hover:bg-background transition-colors"
             >
               <Menu size={24} />
             </button>
@@ -199,19 +271,66 @@ export default function UnifiedLedgerPage() {
             {/* Search Bar - only visible on md+ */}
             <div className="hidden md:flex relative w-80 lg:w-96">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input type="text" placeholder="Search transactions, parties..." className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-border rounded-lg text-sm focus:ring-1 focus:ring-primary focus:outline-none transition-shadow" />
+              <input type="text" placeholder="Search transactions, parties..." className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm text-text-dark focus:ring-1 focus:ring-primary focus:outline-none transition-shadow" />
             </div>
           </div>
           
-          <div className="flex items-center space-x-3 sm:space-x-5">
-            <div className="hidden sm:flex items-center">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Dark Mode Toggle */}
+            <button 
+              onClick={toggleDarkMode}
+              className="p-2 rounded-full hover:bg-background transition-colors text-text-muted"
+            >
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            {/* Privacy Toggle */}
+            <button 
+              onClick={togglePrivacyMode}
+              className="p-2 rounded-full hover:bg-background transition-colors text-text-muted"
+            >
+              {isPrivacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+
+            {/* Switch Ledger Dropdown (Issue 4a) */}
+            <div className="hidden sm:flex items-center relative" ref={ledgerDropdownRef}>
               <button 
-                className="flex items-center space-x-2 bg-[#0f6466] text-white text-sm font-bold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                onClick={() => setShowLedgerDropdown(!showLedgerDropdown)}
+                className="flex items-center space-x-2 bg-primary text-white text-sm font-bold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity max-w-[200px]"
               >
-                <span>Switch Ledger</span>
-                <ChevronDown size={16} />
+                <BookOpen size={16} className="shrink-0" />
+                <span className="truncate">{activeLedger?.name || 'Default Ledger'}</span>
+                <ChevronDown size={16} className={cn("transition-transform shrink-0", showLedgerDropdown && "rotate-180")} />
               </button>
+              {showLedgerDropdown && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-card rounded-xl shadow-xl border border-border py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-3 py-2 text-[10px] font-bold text-text-muted uppercase tracking-widest">Your Ledgers</div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {ledgers.map(l => (
+                      <button
+                        key={l.id}
+                        onClick={() => { setActiveLedger(l); setShowLedgerDropdown(false); }}
+                        className="w-full px-4 py-2 text-left text-sm font-bold hover:bg-background flex items-center justify-between transition-colors"
+                      >
+                        <div className="flex flex-col truncate pr-2">
+                          <span className={cn("truncate", activeLedger?.id === l.id ? "text-primary" : "text-text-dark")}>{l.name}</span>
+                          {l.is_default && <span className="text-[10px] text-text-muted font-normal">Default</span>}
+                        </div>
+                        {activeLedger?.id === l.id && <Check size={16} className="text-primary shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t border-border my-1" />
+                  <button 
+                    onClick={() => { setShowLedgerDropdown(false); setShowCreateLedger(true); }}
+                    className="w-full px-4 py-2.5 text-left text-sm font-bold text-primary hover:bg-primary/5 flex items-center space-x-2 transition-colors"
+                  >
+                    <Plus size={16} />
+                    <span>Create New Ledger</span>
+                  </button>
+                </div>
+              )}
             </div>
+
             <button className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden border border-primary/20">
               {currentUser?.user_metadata?.avatar_url ? (
                 <img src={currentUser.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
@@ -238,8 +357,9 @@ export default function UnifiedLedgerPage() {
                     parties={parties} 
                     isLoading={isLoading} 
                     isPrivacyMode={isPrivacyMode}
-                    onAddParty={() => setShowAddParty(true)}
+                    onAddParty={() => handleOpenAddParty('customer')}
                     onSelectParty={setSelectedParty}
+                    onNavigateToParties={handleNavigateToParties}
                   />
                 )}
                 {activeTab === 'parties' && (
@@ -247,8 +367,9 @@ export default function UnifiedLedgerPage() {
                     parties={parties} 
                     isLoading={isLoading} 
                     isPrivacyMode={isPrivacyMode}
-                    onAddParty={() => setShowAddParty(true)}
+                    onAddParty={handleOpenAddParty}
                     onSelectParty={setSelectedParty}
+                    initialFilter={partiesFilter}
                   />
                 )}
                 {activeTab === 'cashbook' && (
@@ -258,6 +379,7 @@ export default function UnifiedLedgerPage() {
                     isPrivacyMode={isPrivacyMode}
                     onDeleteEntry={handleDeleteCashEntry}
                     onAddEntry={(type) => openCashModal(type)}
+                    onRefresh={fetchData}
                   />
                 )}
                 {activeTab === 'transactions' && (
@@ -266,10 +388,12 @@ export default function UnifiedLedgerPage() {
                     parties={parties}
                     isLoading={isLoading} 
                     isPrivacyMode={isPrivacyMode}
+                    onDeleteEntry={handleDeleteCashEntry}
+                    onRefresh={fetchData}
                   />
                 )}
                 {activeTab === 'reports' && (
-                  <ReportsView isPrivacyMode={isPrivacyMode} />
+                  <ReportsView isPrivacyMode={isPrivacyMode} parties={parties} ledgerId={activeLedger?.id} />
                 )}
                 {activeTab === 'settings' && (
                   <div className="p-12 text-center text-text-muted">Settings coming soon</div>
@@ -281,7 +405,7 @@ export default function UnifiedLedgerPage() {
       </div>
 
       {/* Mobile Bottom Tab Bar for Ledger */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-border px-2 py-1.5 pb-safe-area-inset-bottom">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border px-2 py-1.5 pb-safe-area-inset-bottom">
         <div className="flex items-center justify-around">
           {TABS.slice(0, 5).map(tab => {
             const Icon = tab.icon;
@@ -312,27 +436,27 @@ export default function UnifiedLedgerPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 lg:hidden"
             />
             <motion.aside 
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-72 bg-white z-50 lg:hidden flex flex-col shadow-2xl"
+              className="fixed inset-y-0 left-0 w-72 bg-card z-50 lg:hidden flex flex-col shadow-2xl"
             >
               <div className="flex items-center justify-between px-6 py-5 border-b border-border">
                 <div className="flex flex-col text-left">
                   <span className="text-xl font-bold font-headline"><span className="text-text-dark">fin</span><span className="text-primary">thesia</span></span>
                   <span className="text-[10px] uppercase tracking-widest font-bold text-text-muted mt-1">Premium Ledger</span>
                 </div>
-                <button onClick={() => setIsSidebarOpen(false)} className="p-2 -mr-2 text-text-muted hover:bg-slate-100 rounded-lg">
+                <button onClick={() => setIsSidebarOpen(false)} className="p-2 -mr-2 text-text-muted hover:bg-background rounded-lg">
                   <X size={20} />
                 </button>
               </div>
               
               <div className="px-5 py-4">
-                <button onClick={() => { setIsSidebarOpen(false); navigate('/dashboard'); }} className="flex items-center space-x-2 w-full px-4 py-2.5 bg-[#eaf8fa] text-primary focus:bg-[#d8f4f6] hover:bg-[#d8f4f6] rounded-xl text-sm font-bold transition-colors">
+                <button onClick={() => { setIsSidebarOpen(false); navigate('/dashboard'); }} className="flex items-center space-x-2 w-full px-4 py-2.5 bg-primary/10 text-primary focus:bg-primary/15 hover:bg-primary/15 rounded-xl text-sm font-bold transition-colors">
                   <ArrowLeft size={16} />
                   <span>Back to Dashboard</span>
                 </button>
@@ -348,8 +472,8 @@ export default function UnifiedLedgerPage() {
                       className={cn(
                         "flex items-center w-full space-x-3 px-6 py-3.5 transition-all text-[15px] border-l-4",
                         activeTab === tab.id 
-                          ? "bg-[#f0fafa] text-primary border-primary font-bold"
-                          : "text-text-muted border-transparent hover:bg-slate-50 hover:text-text-dark font-medium"
+                          ? "bg-primary/10 text-primary border-primary font-bold"
+                          : "text-text-muted border-transparent hover:bg-background hover:text-text-dark font-medium"
                       )}>
                       <Icon size={20} /> <span>{tab.label}</span>
                     </button>
@@ -358,7 +482,7 @@ export default function UnifiedLedgerPage() {
               </nav>
               
               <div className="p-5 space-y-2 border-t border-border">
-                <button onClick={() => { setIsSidebarOpen(false); setShowCreateLedger(true); }} className="w-full py-3 bg-[#0f6466] text-white rounded-xl font-bold text-sm flex items-center justify-center space-x-2">
+                <button onClick={() => { setIsSidebarOpen(false); setShowCreateLedger(true); }} className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center space-x-2">
                   <Plus size={18} />
                   <span>New Ledger</span>
                 </button>
@@ -369,13 +493,21 @@ export default function UnifiedLedgerPage() {
       </AnimatePresence>
 
       {/* Global Modals for Ledger */}
-      <CreateLedgerModal open={showCreateLedger} onClose={() => setShowCreateLedger(false)} />
+      <CreateLedgerModal open={showCreateLedger} onClose={() => setShowCreateLedger(false)} onSaved={(newId) => {
+        fetchData();
+        setShowCreateLedger(false);
+      }} />
       <AddUnifiedTransactionModal
         open={showTxModal} onClose={() => setShowTxModal(false)}
         onSaved={() => { fetchData(); setShowTxModal(false); }}
         parties={parties} defaultMode={txModalMode} defaultType={txModalType} defaultPartyId={txModalPartyId}
+        ledgerId={activeLedger?.id}
       />
-      <AddPartyModal open={showAddParty} onClose={() => setShowAddParty(false)} onSaved={fetchData}/>
+      <AddPartyModal 
+        open={showAddParty} onClose={() => setShowAddParty(false)} 
+        onSaved={fetchData} defaultType={addPartyType} 
+        ledgerId={activeLedger?.id} 
+      />
     </div>
   );
 }

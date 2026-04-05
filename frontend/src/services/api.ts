@@ -98,6 +98,7 @@ export interface Transaction {
   liability_id?: string;
   account?: string;
   paymentMethod?: string;
+  payment_source?: 'cash' | 'bank' | 'credit_card';
   tags?: string[];
   isRecurring?: boolean;
   recurringFrequency?: string;   // 'Daily' | 'Weekly' | 'Monthly' | 'Yearly'
@@ -153,6 +154,7 @@ export interface BankTransaction {
   category?: string;
   transaction_date: string;
   transaction_type: 'debit' | 'credit';
+  payment_method?: 'upi' | 'net_banking' | 'imps' | 'neft' | 'rtgs' | 'cheque' | 'debit_card';
   description?: string;
   notes?: string;
   source?: string;
@@ -233,6 +235,209 @@ export interface SpendingPrediction {
   monthly_income: number;
   category_predictions: CategoryPrediction[];
   data_months: number;
+}
+
+// =============================================
+// Ledger & Multi-Ledger Types
+// =============================================
+
+export interface Ledger {
+  id: string;
+  user_id?: string;
+  name: string;
+  description?: string;
+  is_default?: boolean;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// =============================================
+// Investment Types
+// =============================================
+
+export interface Investment {
+  id: string;
+  user_id?: string;
+  name: string;
+  investment_type: string;
+  risk_level?: 'high' | 'medium' | 'low';
+  platform?: string;
+  current_value: number;
+  invested_amount: number;
+  units?: number;
+  maturity_date?: string;
+  interest_rate?: number;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InvestmentTransaction {
+  id: string;
+  user_id?: string;
+  investment_id: string;
+  amount: number;
+  units?: number;
+  transaction_type: 'buy' | 'sell' | 'dividend' | 'interest' | 'sip' | 'switch';
+  transaction_date: string;
+  nav_price?: number;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+// =============================================
+// Real Estate Types
+// =============================================
+
+export interface RealEstate {
+  id: string;
+  user_id?: string;
+  name: string;
+  property_type: string;
+  current_value: number;
+  purchase_value?: number;
+  purchase_date?: string;
+  location?: string;
+  area_sqft?: number;
+  rental_income?: number;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RealEstateTransaction {
+  id: string;
+  user_id?: string;
+  real_estate_id: string;
+  amount: number;
+  transaction_type: string;
+  transaction_date: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+// =============================================
+// Retirement Fund Types
+// =============================================
+
+export interface RetirementFund {
+  id: string;
+  user_id?: string;
+  name: string;
+  fund_type: 'epf' | 'ppf' | 'nps' | 'vpf' | 'other';
+  current_value: number;
+  employer_contribution?: number;
+  employee_contribution?: number;
+  interest_rate?: number;
+  maturity_date?: string;
+  account_number?: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RetirementFundTransaction {
+  id: string;
+  user_id?: string;
+  retirement_fund_id: string;
+  amount: number;
+  transaction_type: 'contribution' | 'withdrawal' | 'interest' | 'employer_match';
+  transaction_date: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+// =============================================
+// Insurance Types
+// =============================================
+
+export interface Insurance {
+  id: string;
+  user_id?: string;
+  name: string;
+  policy_type: 'life' | 'health' | 'vehicle' | 'home' | 'travel' | 'other';
+  provider?: string;
+  policy_number?: string;
+  premium_amount: number;
+  premium_frequency?: string;
+  sum_assured?: number;
+  cover_amount?: number;
+  start_date?: string;
+  end_date?: string;
+  nominee?: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InsuranceTransaction {
+  id: string;
+  user_id?: string;
+  insurance_id: string;
+  amount: number;
+  transaction_type: 'premium_paid' | 'claim_received' | 'maturity' | 'surrender' | 'bonus';
+  transaction_date: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+// =============================================
+// Other Asset Types
+// =============================================
+
+export interface OtherAsset {
+  id: string;
+  user_id?: string;
+  name: string;
+  asset_type?: string;
+  current_value: number;
+  purchase_value?: number;
+  purchase_date?: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OtherTransaction {
+  id: string;
+  user_id?: string;
+  asset_id: string;
+  amount: number;
+  transaction_type: 'purchase' | 'sale' | 'valuation_update';
+  transaction_date: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+// =============================================
+// Card Transaction Type (separate from general transactions)
+// =============================================
+
+export interface CardTransaction {
+  id: string;
+  user_id?: string;
+  card_id: string;
+  amount: number;
+  merchant?: string;
+  category?: string;
+  transaction_date: string;
+  transaction_type: 'purchase' | 'payment' | 'refund' | 'cashback' | 'fee' | 'emi';
+  payment_method?: 'upi' | 'card_swipe' | 'online' | 'tap_and_pay' | 'nfc';
+  description?: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 // =============================================
@@ -543,13 +748,25 @@ export const api = {
 
   // --- Transactions ---
   async getTransactions(): Promise<Transaction[]> {
+    // Attempt to fetch from unified view first
     const { data, error } = await supabase
+      .from('unified_transactions_view')
+      .select('*')
+      .eq('is_active', true)
+      .order('transaction_date', { ascending: false });
+      
+    if (!error && data) {
+      return data;
+    }
+
+    // Fallback to basic transactions if the view doesn't exist yet
+    const { data: fallbackData, error: fallbackError } = await supabase
       .from('transactions')
       .select('*')
       .eq('is_active', true)
       .order('transaction_date', { ascending: false });
-    if (error) throw new Error(error.message);
-    return data || [];
+    if (fallbackError) throw new Error(fallbackError.message);
+    return fallbackData || [];
   },
 
   async addTransaction(transaction: Transaction): Promise<void> {
@@ -632,33 +849,42 @@ export const api = {
     if (error) throw new Error(error.message);
   },
 
-  // --- Net Worth ---
+  // --- Net Worth (includes all asset classes per user flow) ---
   async getNetWorth(): Promise<NetWorthSummary> {
-    const { data: assets } = await supabase
-      .from('assets')
-      .select('current_value')
-      .eq('is_active', true);
+    const [assetsRes, banksRes, liabilitiesRes, cardsRes, investmentsRes, realEstateRes, retirementRes, othersRes, cashbookRes, partyRes] = await Promise.all([
+      supabase.from('assets').select('current_value').eq('is_active', true),
+      supabase.from('banks').select('balance').eq('is_active', true),
+      supabase.from('liabilities').select('balance').eq('is_active', true),
+      supabase.from('cards').select('credit_limit, available_credit').eq('is_active', true),
+      supabase.from('investments').select('current_value').eq('is_active', true),
+      supabase.from('real_estate').select('current_value').eq('is_active', true),
+      supabase.from('retirement_funds').select('current_value').eq('is_active', true),
+      supabase.from('others_assets').select('current_value').eq('is_active', true),
+      supabase.from('cashbook_entries').select('amount, entry_type'),
+      supabase.from('party_ledger_parties').select('balance')
+    ]);
 
-    const { data: banks } = await supabase
-      .from('banks')
-      .select('balance')
-      .eq('is_active', true);
+    const cashbookBalance = (cashbookRes.data || []).reduce((s, c) => {
+      return s + (c.entry_type === 'cash_in' ? Number(c.amount || 0) : -Number(c.amount || 0));
+    }, 0);
 
-    const { data: liabilities } = await supabase
-      .from('liabilities')
-      .select('balance')
-      .eq('is_active', true);
+    const partyAssets = (partyRes.data || []).filter(p => Number(p.balance) > 0).reduce((s, p) => s + Number(p.balance), 0);
+    const partyLiabilities = (partyRes.data || []).filter(p => Number(p.balance) < 0).reduce((s, p) => s + Math.abs(Number(p.balance)), 0);
 
-    const { data: cards } = await supabase
-      .from('cards')
-      .select('credit_limit, available_credit')
-      .eq('is_active', true);
+    const totalAssets =
+      (assetsRes.data || []).reduce((s, a) => s + Number(a.current_value || 0), 0)
+      + (banksRes.data || []).reduce((s, b) => s + Number(b.balance || 0), 0)
+      + (investmentsRes.data || []).reduce((s, i) => s + Number(i.current_value || 0), 0)
+      + (realEstateRes.data || []).reduce((s, r) => s + Number(r.current_value || 0), 0)
+      + (retirementRes.data || []).reduce((s, r) => s + Number(r.current_value || 0), 0)
+      + (othersRes.data || []).reduce((s, o) => s + Number(o.current_value || 0), 0)
+      + cashbookBalance // Cash on hand is an asset
+      + partyAssets;    // Receivables are assets
 
-    const totalAssets = (assets || []).reduce((s, a) => s + Number(a.current_value || 0), 0)
-      + (banks || []).reduce((s, b) => s + Number(b.balance || 0), 0);
-
-    const totalLiabilities = (liabilities || []).reduce((s, l) => s + Number(l.balance || 0), 0)
-      + (cards || []).reduce((s, c) => s + (Number(c.credit_limit || 0) - Number(c.available_credit || 0)), 0);
+    const totalLiabilities = 
+      (liabilitiesRes.data || []).reduce((s, l) => s + Number(l.balance || 0), 0)
+      + (cardsRes.data || []).reduce((s, c) => s + (Number(c.credit_limit || 0) - Number(c.available_credit || 0)), 0)
+      + partyLiabilities; // Payables are liabilities
 
     return {
       totalAssets,
@@ -727,6 +953,24 @@ export const api = {
     const userId = await getUserId();
     const { error } = await supabase.rpc('foreclose_emi', {
       p_emi_id: id,
+      p_user_id: userId,
+    });
+    if (error) throw new Error(error.message);
+  },
+
+  async markCardAsPaid(cardId: string): Promise<void> {
+    const userId = await getUserId();
+    const { error } = await supabase.rpc('mark_card_bill_paid', {
+      p_card_id: cardId,
+      p_user_id: userId,
+    });
+    if (error) throw new Error(error.message);
+  },
+
+  async markEMIAsPaid(emiId: string): Promise<void> {
+    const userId = await getUserId();
+    const { error } = await supabase.rpc('mark_emi_installment_paid', {
+      p_emi_id: emiId,
       p_user_id: userId,
     });
     if (error) throw new Error(error.message);
@@ -1364,5 +1608,525 @@ export const api = {
       .update({ is_active: false })
       .eq('id', id);
     if (error) throw new Error(error.message);
-  }
+  },
+
+  // =============================================
+  // LEDGERS — Multi-ledger support
+  // =============================================
+
+  async getLedgers(): Promise<Ledger[]> {
+    const { data, error } = await supabase
+      .from('ledgers')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addLedger(ledger: Omit<Ledger, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('ledgers').insert({
+      id, user_id: userId,
+      name: ledger.name,
+      description: ledger.description || null,
+      is_default: ledger.is_default || false,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async updateLedger(id: string, updates: Partial<Ledger>): Promise<void> {
+    const { error } = await supabase.from('ledgers')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteLedger(id: string): Promise<void> {
+    const { error } = await supabase.from('ledgers')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // =============================================
+  // INVESTMENTS — Stocks, MF, ETF, Crypto, FD, RD, Bonds, Gold
+  // =============================================
+
+  async getInvestments(): Promise<Investment[]> {
+    const { data, error } = await supabase
+      .from('investments')
+      .select('*')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addInvestment(inv: Omit<Investment, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('investments').insert({
+      id, user_id: userId,
+      name: inv.name,
+      investment_type: inv.investment_type,
+      risk_level: inv.risk_level || null,
+      platform: inv.platform || null,
+      current_value: inv.current_value || 0,
+      invested_amount: inv.invested_amount || 0,
+      units: inv.units || null,
+      maturity_date: inv.maturity_date || null,
+      interest_rate: inv.interest_rate || null,
+      notes: inv.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async updateInvestment(id: string, updates: Partial<Investment>): Promise<void> {
+    const { error } = await supabase.from('investments')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteInvestment(id: string): Promise<void> {
+    const { error } = await supabase.from('investments')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- Investment Transactions ---
+  async getInvestmentTransactions(investmentId?: string): Promise<InvestmentTransaction[]> {
+    let query = supabase
+      .from('investment_transactions')
+      .select('*')
+      .eq('is_active', true)
+      .order('transaction_date', { ascending: false });
+    if (investmentId) query = query.eq('investment_id', investmentId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addInvestmentTransaction(tx: Omit<InvestmentTransaction, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.rpc('add_investment_transaction_with_sync', {
+      p_id: id,
+      p_user_id: userId,
+      p_investment_id: tx.investment_id,
+      p_amount: tx.amount,
+      p_units: tx.units || null,
+      p_transaction_type: tx.transaction_type,
+      p_transaction_date: tx.transaction_date,
+      p_nav_price: tx.nav_price || null,
+      p_notes: tx.notes || null,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async deleteInvestmentTransaction(id: string): Promise<void> {
+    const { error } = await supabase.from('investment_transactions')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // =============================================
+  // REAL ESTATE — Property tracking
+  // =============================================
+
+  async getRealEstate(): Promise<RealEstate[]> {
+    const { data, error } = await supabase
+      .from('real_estate')
+      .select('*')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addRealEstate(property: Omit<RealEstate, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('real_estate').insert({
+      id, user_id: userId,
+      name: property.name,
+      property_type: property.property_type,
+      current_value: property.current_value || 0,
+      purchase_value: property.purchase_value || null,
+      purchase_date: property.purchase_date || null,
+      location: property.location || null,
+      area_sqft: property.area_sqft || null,
+      rental_income: property.rental_income || 0,
+      notes: property.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async updateRealEstate(id: string, updates: Partial<RealEstate>): Promise<void> {
+    const { error } = await supabase.from('real_estate')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteRealEstate(id: string): Promise<void> {
+    const { error } = await supabase.from('real_estate')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- Real Estate Transactions ---
+  async getRealEstateTransactions(realEstateId?: string): Promise<RealEstateTransaction[]> {
+    let query = supabase
+      .from('real_estate_transactions')
+      .select('*')
+      .eq('is_active', true)
+      .order('transaction_date', { ascending: false });
+    if (realEstateId) query = query.eq('real_estate_id', realEstateId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addRealEstateTransaction(tx: Omit<RealEstateTransaction, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('real_estate_transactions').insert({
+      id, user_id: userId,
+      real_estate_id: tx.real_estate_id,
+      amount: tx.amount,
+      transaction_type: tx.transaction_type,
+      transaction_date: tx.transaction_date,
+      notes: tx.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async deleteRealEstateTransaction(id: string): Promise<void> {
+    const { error } = await supabase.from('real_estate_transactions')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // =============================================
+  // RETIREMENT FUNDS — EPF, PPF, NPS, VPF
+  // =============================================
+
+  async getRetirementFunds(): Promise<RetirementFund[]> {
+    const { data, error } = await supabase
+      .from('retirement_funds')
+      .select('*')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addRetirementFund(fund: Omit<RetirementFund, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('retirement_funds').insert({
+      id, user_id: userId,
+      name: fund.name,
+      fund_type: fund.fund_type,
+      current_value: fund.current_value || 0,
+      employer_contribution: fund.employer_contribution || 0,
+      employee_contribution: fund.employee_contribution || 0,
+      interest_rate: fund.interest_rate || null,
+      maturity_date: fund.maturity_date || null,
+      account_number: fund.account_number || null,
+      notes: fund.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async updateRetirementFund(id: string, updates: Partial<RetirementFund>): Promise<void> {
+    const { error } = await supabase.from('retirement_funds')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteRetirementFund(id: string): Promise<void> {
+    const { error } = await supabase.from('retirement_funds')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- Retirement Fund Transactions ---
+  async getRetirementFundTransactions(fundId?: string): Promise<RetirementFundTransaction[]> {
+    let query = supabase
+      .from('retirement_fund_transactions')
+      .select('*')
+      .eq('is_active', true)
+      .order('transaction_date', { ascending: false });
+    if (fundId) query = query.eq('retirement_fund_id', fundId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addRetirementFundTransaction(tx: Omit<RetirementFundTransaction, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('retirement_fund_transactions').insert({
+      id, user_id: userId,
+      retirement_fund_id: tx.retirement_fund_id,
+      amount: tx.amount,
+      transaction_type: tx.transaction_type,
+      transaction_date: tx.transaction_date,
+      notes: tx.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async deleteRetirementFundTransaction(id: string): Promise<void> {
+    const { error } = await supabase.from('retirement_fund_transactions')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // =============================================
+  // INSURANCE — Life, Health, Vehicle, Home, Travel
+  // =============================================
+
+  async getInsurance(): Promise<Insurance[]> {
+    const { data, error } = await supabase
+      .from('insurance')
+      .select('*')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addInsurance(policy: Omit<Insurance, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('insurance').insert({
+      id, user_id: userId,
+      name: policy.name,
+      policy_type: policy.policy_type,
+      provider: policy.provider || null,
+      policy_number: policy.policy_number || null,
+      premium_amount: policy.premium_amount || 0,
+      premium_frequency: policy.premium_frequency || 'yearly',
+      sum_assured: policy.sum_assured || null,
+      cover_amount: policy.cover_amount || null,
+      start_date: policy.start_date || null,
+      end_date: policy.end_date || null,
+      nominee: policy.nominee || null,
+      notes: policy.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async updateInsurance(id: string, updates: Partial<Insurance>): Promise<void> {
+    const { error } = await supabase.from('insurance')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteInsurance(id: string): Promise<void> {
+    const { error } = await supabase.from('insurance')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- Insurance Transactions ---
+  async getInsuranceTransactions(insuranceId?: string): Promise<InsuranceTransaction[]> {
+    let query = supabase
+      .from('insurance_transactions')
+      .select('*')
+      .eq('is_active', true)
+      .order('transaction_date', { ascending: false });
+    if (insuranceId) query = query.eq('insurance_id', insuranceId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addInsuranceTransaction(tx: Omit<InsuranceTransaction, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('insurance_transactions').insert({
+      id, user_id: userId,
+      insurance_id: tx.insurance_id,
+      amount: tx.amount,
+      transaction_type: tx.transaction_type,
+      transaction_date: tx.transaction_date,
+      notes: tx.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async deleteInsuranceTransaction(id: string): Promise<void> {
+    const { error } = await supabase.from('insurance_transactions')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // =============================================
+  // OTHER ASSETS — Gold, Art, Collectibles, Vehicles, etc.
+  // =============================================
+
+  async getOtherAssets(): Promise<OtherAsset[]> {
+    const { data, error } = await supabase
+      .from('others_assets')
+      .select('*')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addOtherAsset(asset: Omit<OtherAsset, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('others_assets').insert({
+      id, user_id: userId,
+      name: asset.name,
+      asset_type: asset.asset_type || null,
+      current_value: asset.current_value || 0,
+      purchase_value: asset.purchase_value || null,
+      purchase_date: asset.purchase_date || null,
+      notes: asset.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async updateOtherAsset(id: string, updates: Partial<OtherAsset>): Promise<void> {
+    const { error } = await supabase.from('others_assets')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteOtherAsset(id: string): Promise<void> {
+    const { error } = await supabase.from('others_assets')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- Other Asset Transactions ---
+  async getOtherTransactions(assetId?: string): Promise<OtherTransaction[]> {
+    let query = supabase
+      .from('others_transactions')
+      .select('*')
+      .eq('is_active', true)
+      .order('transaction_date', { ascending: false });
+    if (assetId) query = query.eq('asset_id', assetId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addOtherTransaction(tx: Omit<OtherTransaction, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.from('others_transactions').insert({
+      id, user_id: userId,
+      asset_id: tx.asset_id,
+      amount: tx.amount,
+      transaction_type: tx.transaction_type,
+      transaction_date: tx.transaction_date,
+      notes: tx.notes || null,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async deleteOtherTransaction(id: string): Promise<void> {
+    const { error } = await supabase.from('others_transactions')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // =============================================
+  // CARD TRANSACTIONS — Credit card specific logs
+  // =============================================
+
+  async getCardTransactions(cardId?: string): Promise<CardTransaction[]> {
+    let query = supabase
+      .from('cards_transactions')
+      .select('*')
+      .eq('is_active', true)
+      .order('transaction_date', { ascending: false });
+    if (cardId) query = query.eq('card_id', cardId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async addCardTransaction(tx: Omit<CardTransaction, 'id'>): Promise<{ success: boolean; id: string }> {
+    const userId = await getUserId();
+    const id = generateId();
+    const { error } = await supabase.rpc('add_card_transaction_with_sync', {
+      p_id: id,
+      p_user_id: userId,
+      p_card_id: tx.card_id,
+      p_amount: tx.amount,
+      p_merchant: tx.merchant || null,
+      p_category: tx.category || null,
+      p_transaction_date: tx.transaction_date,
+      p_transaction_type: tx.transaction_type,
+      p_payment_method: tx.payment_method || null,
+      p_description: tx.description || null,
+      p_notes: tx.notes || null,
+    });
+    if (error) throw new Error(error.message);
+    return { success: true, id };
+  },
+
+  async deleteCardTransaction(id: string): Promise<void> {
+    const { error } = await supabase.from('cards_transactions')
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // =============================================
+  // NET WORTH SNAPSHOT — Trigger comprehensive snapshot
+  // =============================================
+
+  async triggerNetWorthSnapshot(): Promise<void> {
+    const userId = await getUserId();
+    const { error } = await supabase.rpc('update_net_worth_snapshot', {
+      p_user_id: userId,
+    });
+    if (error) throw new Error(error.message);
+  },
 };

@@ -166,6 +166,64 @@ CREATE TABLE IF NOT EXISTS net_worth_history (
 );
 
 -- =============================================
+-- LEDGERS & PARTY SYSTEM
+-- =============================================
+CREATE TABLE IF NOT EXISTS ledgers (
+  id           TEXT PRIMARY KEY,
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL,
+  description  TEXT,
+  is_default   BOOLEAN DEFAULT FALSE,
+  is_active    BOOLEAN DEFAULT TRUE,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cashbook_entries (
+  id           TEXT PRIMARY KEY,
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  ledger_id    TEXT NOT NULL REFERENCES ledgers(id) ON DELETE CASCADE,
+  amount       DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
+  entry_type   TEXT NOT NULL CHECK (entry_type IN ('cash_in', 'cash_out')),
+  category     TEXT NOT NULL,
+  note         TEXT DEFAULT '',
+  entry_date   DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS party_ledger_parties (
+  id         TEXT PRIMARY KEY,
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  ledger_id  TEXT NOT NULL REFERENCES ledgers(id) ON DELETE CASCADE,
+  party_type TEXT DEFAULT 'customer',
+  name       TEXT NOT NULL,
+  phone      TEXT,
+  email      TEXT,
+  address    TEXT,
+  gstin      TEXT,
+  notes      TEXT,
+  total_gave DECIMAL(15, 2) DEFAULT 0,
+  total_got  DECIMAL(15, 2) DEFAULT 0,
+  balance    DECIMAL(15, 2) DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS party_ledger_txns (
+  id         TEXT PRIMARY KEY,
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  ledger_id  TEXT NOT NULL REFERENCES ledgers(id) ON DELETE CASCADE,
+  party_id   TEXT NOT NULL REFERENCES party_ledger_parties(id) ON DELETE CASCADE,
+  amount     DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
+  txn_type   TEXT NOT NULL CHECK (txn_type IN ('gave', 'got')),
+  note       TEXT DEFAULT '',
+  txn_date   DATE NOT NULL DEFAULT CURRENT_DATE,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================
 -- ROW LEVEL SECURITY (RLS)
 -- =============================================
 
@@ -178,6 +236,10 @@ ALTER TABLE banks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bank_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE net_worth_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ledgers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cashbook_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE party_ledger_parties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE party_ledger_txns ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: Users can only access their own data
 DO $$
@@ -186,9 +248,15 @@ DECLARE
 BEGIN
   FOR tbl IN SELECT unnest(ARRAY[
     'assets', 'liabilities', 'cards', 'transactions', 'emis',
-    'banks', 'bank_transactions', 'subscriptions', 'net_worth_history'
+    'banks', 'bank_transactions', 'subscriptions', 'net_worth_history',
+    'ledgers', 'cashbook_entries', 'party_ledger_parties', 'party_ledger_txns'
   ])
   LOOP
+    EXECUTE format('DROP POLICY IF EXISTS "Users can view own %1$s" ON %1$s;', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "Users can insert own %1$s" ON %1$s;', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "Users can update own %1$s" ON %1$s;', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "Users can delete own %1$s" ON %1$s;', tbl);
+
     EXECUTE format(
       'CREATE POLICY "Users can view own %1$s" ON %1$s FOR SELECT USING (auth.uid() = user_id)',
       tbl
@@ -239,9 +307,24 @@ $$ LANGUAGE plpgsql;
 
 -- Function: Add transaction with sync cascades
 CREATE OR REPLACE FUNCTION add_transaction_with_sync(
-  p_id TEXT, p_user_id UUID, p_amount DECIMAL, p_category TEXT,
-  p_description TEXT, p_transaction_date TEXT, p_type TEXT,
-  p_card_id TEXT DEFAULT NULL, p_liability_id TEXT DEFAULT NULL
+  p_id                   TEXT,
+  p_user_id              UUID,
+  p_amount               DECIMAL,
+  p_category             TEXT,
+  p_description          TEXT,
+  p_transaction_date     TEXT,
+  p_type                 TEXT,
+  p_card_id              TEXT    DEFAULT NULL,
+  p_liability_id         TEXT    DEFAULT NULL,
+  p_account              TEXT    DEFAULT NULL,
+  p_payment_method       TEXT    DEFAULT NULL,
+  p_is_recurring         BOOLEAN DEFAULT FALSE,
+  p_recurring_frequency  TEXT    DEFAULT NULL,
+  p_recurring_end_date   TEXT    DEFAULT NULL,
+  p_recurring_repeats    INTEGER DEFAULT NULL,
+  p_receipt_url          TEXT    DEFAULT NULL,
+  p_location             JSONB   DEFAULT NULL,
+  p_tags                 TEXT[]  DEFAULT '{}'
 ) RETURNS VOID AS $$
 DECLARE
   v_cash_asset_id TEXT;
@@ -249,8 +332,19 @@ DECLARE
   v_card RECORD;
 BEGIN
   -- Insert the transaction
-  INSERT INTO transactions (id, user_id, amount, category, description, transaction_date, type, card_id, liability_id, is_active)
-  VALUES (p_id, p_user_id, p_amount, p_category, p_description, p_transaction_date, p_type, p_card_id, p_liability_id, TRUE);
+  INSERT INTO transactions (
+    id, user_id, amount, category, description, transaction_date, type, 
+    card_id, liability_id, is_active,
+    account, payment_method, is_recurring, recurring_frequency, 
+    recurring_end_date, recurring_repeats, receipt_url, location, tags
+  )
+  VALUES (
+    p_id, p_user_id, p_amount, p_category, p_description, p_transaction_date::DATE, p_type, 
+    p_card_id, p_liability_id, TRUE,
+    p_account, p_payment_method, p_is_recurring, p_recurring_frequency, 
+    CASE WHEN p_recurring_end_date IS NOT NULL AND p_recurring_end_date != '' THEN p_recurring_end_date::DATE ELSE NULL END, 
+    p_recurring_repeats, p_receipt_url, p_location, p_tags
+  );
 
   -- Sync logic
   IF p_card_id IS NOT NULL AND p_type = 'spend' THEN
@@ -413,3 +507,86 @@ BEGIN
   UPDATE banks SET balance = balance + v_adjustment, updated_at = NOW() WHERE id = v_tx.bank_id AND user_id = p_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================
+-- LEDGER TRIGGERS
+-- =============================================
+
+CREATE OR REPLACE FUNCTION sync_party_balance_columns()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_party_id TEXT;
+  v_gave NUMERIC;
+  v_got  NUMERIC;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    v_party_id := OLD.party_id;
+  ELSE
+    v_party_id := NEW.party_id;
+  END IF;
+
+  SELECT
+    COALESCE(SUM(CASE WHEN txn_type = 'gave' THEN amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN txn_type = 'got'  THEN amount ELSE 0 END), 0)
+  INTO v_gave, v_got
+  FROM party_ledger_txns
+  WHERE party_id = v_party_id;
+
+  UPDATE party_ledger_parties
+  SET total_gave = v_gave,
+      total_got  = v_got,
+      balance    = v_gave - v_got,
+      updated_at = NOW()
+  WHERE id = v_party_id;
+
+  IF TG_OP = 'UPDATE' AND OLD.party_id <> NEW.party_id THEN
+    SELECT
+      COALESCE(SUM(CASE WHEN txn_type = 'gave' THEN amount ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN txn_type = 'got'  THEN amount ELSE 0 END), 0)
+    INTO v_gave, v_got
+    FROM party_ledger_txns
+    WHERE party_id = OLD.party_id;
+
+    UPDATE party_ledger_parties
+    SET total_gave = v_gave,
+        total_got  = v_got,
+        balance    = v_gave - v_got,
+        updated_at = NOW()
+    WHERE id = OLD.party_id;
+  END IF;
+
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_sync_party_balance_cols ON party_ledger_txns;
+CREATE TRIGGER trg_sync_party_balance_cols
+  AFTER INSERT OR UPDATE OR DELETE ON party_ledger_txns
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_party_balance_columns();
+ 
+
+-- LEDGER TRIGGER ON USER SIGNUP
+CREATE OR REPLACE FUNCTION public.handle_new_user_ledger()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.ledgers (id, user_id, name, description, is_default, is_active, created_at, updated_at)
+  VALUES (
+    gen_random_uuid()::TEXT,
+    NEW.id,
+    'My Personal Ledger',
+    'Your default personal ledger for all cash and party transactions.',
+    true,
+    true,
+    NOW(),
+    NOW()
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user_ledger();

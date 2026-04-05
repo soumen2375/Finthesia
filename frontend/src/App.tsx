@@ -15,10 +15,10 @@ import TermsPage from '@/pages/public/legal/TermsPage';
 import PrivacyPage from '@/pages/public/legal/PrivacyPage';
 import ShippingPage from '@/pages/public/legal/ShippingPage';
 import RefundsPage from '@/pages/public/legal/RefundsPage';
+import DocsPage from '@/pages/public/marketing/DocsPage';
 import DashboardPage from '@/pages/app/dashboard/DashboardPage';
 import NetWorthPage from '@/pages/app/dashboard/NetWorthPage';
 import CardsPage from '@/pages/app/accounts/CardsPage';
-import AnalyticsPage from '@/pages/app/dashboard/AnalyticsPage';
 import SettingsPage from '@/pages/app/settings/SettingsPage';
 import BudgetsPage from '@/pages/app/planning/BudgetsPage';
 import BillsPage from '@/pages/app/planning/BillsPage';
@@ -64,6 +64,7 @@ export default function App() {
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/contact" element={<ContactPage />} />
                   <Route path="/faq" element={<FaqPage />} />
+                  <Route path="/docs" element={<DocsPage />} />
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="/privacy-policy" element={<PrivacyPage />} />
                   <Route path="/privacy-policy/" element={<PrivacyPage />} />

@@ -1,27 +1,47 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '@/context/ToastContext';
+import { supabase } from '@/lib/supabaseClient';
 
 interface CreateLedgerModalProps {
   open: boolean;
   onClose: () => void;
+  onSaved: (newId?: string) => void;
 }
 
-export default function CreateLedgerModal({ open, onClose }: CreateLedgerModalProps) {
+export default function CreateLedgerModal({ open, onClose, onSaved }: CreateLedgerModalProps) {
   const { showToast } = useToast();
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Retail & Commerce');
   const [description, setDescription] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || loading) return;
     
-    // In a real app we'd save to DB here. For now we just mock success as this is UI focused.
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    const newId = crypto.randomUUID();
+    const { error } = await supabase.from('ledgers').insert({
+      id: newId,
+      user_id: user.id,
+      name: name.trim(),
+      description: description.trim() || null,
+      is_default: false,
+      is_active: true
+    });
+
+    setLoading(false);
+    if (error) { showToast(error.message, 'error'); return; }
+
     showToast('New ledger created successfully', 'success');
     setName('');
     setDescription('');
-    onClose();
+    onSaved(newId);
   };
 
   if (!open) return null;
@@ -84,11 +104,11 @@ export default function CreateLedgerModal({ open, onClose }: CreateLedgerModalPr
                 </div>
 
                 <div className="pt-6 flex items-center justify-end gap-6 border-t border-slate-100 mt-2">
-                   <button type="button" onClick={onClose} className="text-[15px] font-bold text-slate-500 hover:text-slate-800 transition-colors">
+                   <button type="button" onClick={onClose} disabled={loading} className="text-[15px] font-bold text-slate-500 hover:text-slate-800 transition-colors">
                      Cancel
                    </button>
-                   <button type="submit" className="px-8 py-3.5 bg-[#0fbcd4] text-white rounded-lg text-[15px] font-bold shadow-md shadow-[#0fbcd4]/30 hover:bg-[#0daabf] transition-all">
-                     Create Ledger
+                   <button type="submit" disabled={loading} className="px-8 py-3.5 bg-[#0fbcd4] text-white rounded-lg text-[15px] font-bold shadow-md shadow-[#0fbcd4]/30 hover:bg-[#0daabf] transition-all disabled:opacity-50">
+                     {loading ? 'Creating...' : 'Create Ledger'}
                    </button>
                 </div>
              </form>

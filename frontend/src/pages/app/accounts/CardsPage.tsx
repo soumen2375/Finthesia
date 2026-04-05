@@ -12,7 +12,8 @@ import {
   RotateCw,
   TrendingUp,
   Wallet,
-  Zap
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
@@ -25,17 +26,17 @@ import { CardDetailsModal } from '@/components/app/CardDetailsModal';
 import { formatCurrency } from '@/lib/formatters';
 
 const BANKS = [
-  "HDFC Bank",
-  "SBI Card",
-  "ICICI Bank",
-  "Axis Bank",
-  "Kotak Mahindra Bank",
-  "IndusInd Bank",
-  "RBL Bank",
-  "IDFC FIRST Bank",
   "AU Small Finance Bank",
-  "Yes Bank",
+  "Axis Bank",
   "Federal Bank",
+  "HDFC Bank",
+  "ICICI Bank",
+  "IDFC FIRST Bank",
+  "IndusInd Bank",
+  "Kotak Mahindra Bank",
+  "RBL Bank",
+  "SBI Card",
+  "Yes Bank",
   "Other"
 ];
 
@@ -431,14 +432,34 @@ export default function CardsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4 p-5 bg-background rounded-2xl border border-border">
-                      <div className="h-10 w-10 bg-[#00BFFF]/10 text-[#00BFFF] rounded-xl flex items-center justify-center shadow-sm">
-                        <Receipt size={20} />
+                    <div className="flex items-center justify-between p-5 bg-background rounded-2xl border border-border">
+                      <div className="flex items-center space-x-4">
+                        <div className="h-10 w-10 bg-[#00BFFF]/10 text-[#00BFFF] rounded-xl flex items-center justify-center shadow-sm">
+                          <Receipt size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Amount Due</p>
+                          <p className="text-sm font-bold text-text-dark">{formatCurrency(activeCard.total_amount_due || 0, isPrivacyMode)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Amount Due</p>
-                        <p className="text-sm font-bold text-text-dark">{formatCurrency(activeCard.total_amount_due || 0, isPrivacyMode)}</p>
-                      </div>
+                      {(activeCard.total_amount_due || 0) > 0 && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await api.markCardAsPaid(activeCard.id);
+                              showToast('Bill marked as paid', 'success');
+                              fetchCards();
+                            } catch (err) {
+                              showToast('Failed to mark as paid', 'error');
+                            }
+                          }}
+                          className="flex items-center space-x-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-200 border border-primary/20 hover:border-primary shadow-sm hover:shadow-lg hover:shadow-primary/20"
+                        >
+                          <CheckCircle2 size={14} />
+                          <span>Mark As Paid</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 

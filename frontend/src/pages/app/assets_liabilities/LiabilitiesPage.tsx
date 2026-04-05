@@ -66,6 +66,11 @@ export default function LiabilitiesPage() {
   // derived from the cards table. Direct delete is not supported.
   const isCardDebt = (id: string) => id.startsWith('card-debt-');
 
+  // System-managed liabilities (auto-synced from Party Ledger triggers)
+  const isSystemManaged = (lib: Liability) => {
+    return lib.name === 'Party Payables';
+  };
+
   const handleDelete = async (id: string) => {
     if (isCardDebt(id)) {
       setDeleteConfirm(null);
@@ -370,30 +375,38 @@ export default function LiabilitiesPage() {
                                 <p className="text-lg sm:text-xl font-bold text-text-dark">{formatCurrency(lib.balance, isPrivacyMode)}</p>
                                 <div className="flex items-center space-x-1">
                                    {isCardDebt(lib.id) ? (
-                                     <span
-                                       className="px-2 py-1.5 rounded-lg bg-background border border-border text-[9px] font-bold text-text-muted uppercase tracking-widest cursor-default select-none"
-                                       title="Managed via Cards"
-                                     >
-                                       Auto
-                                     </span>
-                                   ) : (
-                                     <>
-                                       <button
-                                         onClick={() => { setEditingLiab(lib); setIsModalOpen(true); }}
-                                         className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-text-dark transition-colors"
-                                         title="Edit"
-                                       >
-                                         <Pencil size={14} />
-                                       </button>
-                                       <button
-                                         onClick={() => setDeleteConfirm(lib.id)}
-                                         className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-red-500 transition-colors"
-                                         title="Delete"
-                                       >
-                                         <Trash2 size={14} />
-                                       </button>
-                                     </>
-                                   )}
+                                      <span
+                                        className="px-2 py-1.5 rounded-lg bg-background border border-border text-[9px] font-bold text-text-muted uppercase tracking-widest cursor-default select-none"
+                                        title="Managed via Cards"
+                                      >
+                                        Auto
+                                      </span>
+                                    ) : isSystemManaged(lib) ? (
+                                      <button
+                                        onClick={() => navigate('/ledger')}
+                                        className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase tracking-widest hover:bg-primary/20 transition-colors flex items-center space-x-1"
+                                        title="Managed via Party Ledger"
+                                      >
+                                        <span>View Ledger</span>
+                                      </button>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() => { setEditingLiab(lib); setIsModalOpen(true); }}
+                                          className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-text-dark transition-colors"
+                                          title="Edit"
+                                        >
+                                          <Pencil size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => setDeleteConfirm(lib.id)}
+                                          className="p-1.5 rounded-lg bg-background border border-border text-text-muted hover:text-red-500 transition-colors"
+                                          title="Delete"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </>
+                                    )}
                                  </div>
                               </div>
                             </div>
