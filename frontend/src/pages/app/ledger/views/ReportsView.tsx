@@ -23,6 +23,9 @@ interface ReportsViewProps {
   isPrivacyMode: boolean;
   parties: PartyInfo[];
   ledgerId?: string;
+  activeLedgerId?: string;
+  cashEntries?: any[];
+  preSelectedPartyId?: string | null;
 }
 
 type PartyTab = 'customers' | 'suppliers';
@@ -51,7 +54,8 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export default function ReportsView({ isPrivacyMode, parties, ledgerId }: ReportsViewProps) {
+export default function ReportsView({ isPrivacyMode, parties, ledgerId, activeLedgerId, cashEntries, preSelectedPartyId }: ReportsViewProps) {
+  const effectiveLedgerId = ledgerId || activeLedgerId;
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<PartyTab>('customers');
   const [period, setPeriod] = useState<PeriodOption>('this_month');
@@ -70,13 +74,13 @@ export default function ReportsView({ isPrivacyMode, parties, ledgerId }: Report
 
   // Fetch transactions within date range for this ledger
   useEffect(() => {
-    if (!ledgerId || !startDate || !endDate) return;
+    if (!effectiveLedgerId || !startDate || !endDate) return;
     const fetchTxns = async () => {
       setLoading(true);
       const { data } = await supabase
         .from('party_ledger_txns')
         .select('*, party_ledger_parties(name, party_type)')
-        .eq('ledger_id', ledgerId)
+        .eq('ledger_id', effectiveLedgerId)
         .gte('txn_date', startDate)
         .lte('txn_date', endDate)
         .order('txn_date', { ascending: false })
@@ -85,7 +89,7 @@ export default function ReportsView({ isPrivacyMode, parties, ledgerId }: Report
       setLoading(false);
     };
     fetchTxns();
-  }, [ledgerId, startDate, endDate]);
+  }, [effectiveLedgerId, startDate, endDate]);
 
   // Count parties by type
   const customerCount = parties.filter(p => (p.party_type || 'customer') === 'customer').length;

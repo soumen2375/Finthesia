@@ -13,7 +13,11 @@ import {
   TrendingUp,
   Wallet,
   Zap,
-  CheckCircle2
+  CheckCircle2,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ShoppingBag,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
@@ -66,6 +70,9 @@ export default function CardsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cardSpending, setCardSpending] = useState<Record<string, number>>({});
+  // Inline transactions per active card
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [txLoading, setTxLoading] = useState(false);
 
   // Form states
   const [selectedBank, setSelectedBank] = useState("");
@@ -78,12 +85,14 @@ export default function CardsPage() {
 
   const fetchCards = async () => {
     setIsLoading(true);
+    setTxLoading(true);
     try {
       const data = await api.getCards();
       setCards(data);
-      // Compute current month spending per card
+      // Fetch all transactions once
       const txs: Transaction[] = await api.getTransactions();
-      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      setAllTransactions(txs);
+      const currentMonth = new Date().toISOString().slice(0, 7);
       const spending: Record<string, number> = {};
       txs.forEach(tx => {
         if (tx.card_id && (tx.type === 'spend' || tx.type === 'expense') && tx.transaction_date?.startsWith(currentMonth)) {
@@ -95,6 +104,7 @@ export default function CardsPage() {
       console.error('Failed to fetch cards', error);
     } finally {
       setIsLoading(false);
+      setTxLoading(false);
     }
   };
 
@@ -512,6 +522,99 @@ export default function CardsPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* ─── Inline Card Transactions ─── */}
+                {(() => {
+                  const thirtyDaysAgo = new Date();
+                  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                  const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
+                  const cardTxs = allTransactions
+                    .filter(tx => tx.card_id === activeCard.id && tx.transaction_date >= cutoff)
+                    .sort((a, b) => b.transaction_date.localeCompare(a.transaction_date))
+                    .slice(0, 10);
+
+                  return (
+                    <section className="space-y-4">
+                      <div className="flex items-center justify-between px-1">
+                        <h4 className="text-base font-bold text-text-dark">Recent Transactions</h4>
+                        <button
+                          onClick={() => { setSelectedCard(activeCard); setIsDetailsOpen(true); }}
+                          className="text-xs font-bold text-primary hover:text-primary-hover flex items-center gap-1 transition-colors"
+                        >
+                          View All <ChevronRight size={12} />
+                        </button>
+                      </div>
+
+                      <div className="card p-0 overflow-hidden">
+                        {txLoading ? (
+                          <div className="space-y-0">
+                            {[1,2,3].map(i => (
+                              <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-border last:border-b-0">
+                                <div className="w-10 h-10 rounded-xl bg-background animate-pulse" />
+                                <div className="flex-1 space-y-2">
+                                  <div className="h-3 bg-background rounded animate-pulse w-2/3" />
+                                  <div className="h-2.5 bg-background rounded animate-pulse w-1/3" />
+                                </div>
+                                <div className="h-4 bg-background rounded animate-pulse w-16" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : cardTxs.length === 0 ? (
+                          <div className="py-10 flex flex-col items-center justify-center gap-3 text-center">
+                            <div className="w-14 h-14 bg-background rounded-2xl flex items-center justify-center border border-border">
+                              <ShoppingBag size={24} className="text-border" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-text-dark">No transactions yet</p>
+                              <p className="text-xs text-text-muted mt-0.5">Transactions for this card will appear here</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-border">
+                            {cardTxs.map((tx, i) => {
+                              const isSpend = tx.type === 'spend' || tx.type === 'expense';
+                              const isPayment = tx.type === 'payment';
+                              const txDate = new Date(tx.transaction_date + 'T00:00:00');
+                              const today = new Date().toISOString().split('T')[0];
+                              const dateLabel = tx.transaction_date === today
+                                ? 'Today'
+                                : txDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                              return (
+                                <motion.div
+                                  key={tx.id}
+                                  initial={{ opacity: 0, x: -8 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: i * 0.04 }}
+                                  className="flex items-center gap-4 px-5 py-4 hover:bg-background/50 transition-colors"
+                                >
+                                  <div className={cn(
+                                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                                    isPayment ? "bg-primary/10 text-primary" : isSpend ? "bg-danger/10 text-danger" : "bg-text-muted/10 text-text-muted"
+                                  )}>
+                                    {isPayment ? <ArrowDownLeft size={18} /> : isSpend ? <ArrowUpRight size={18} /> : <RefreshCw size={16} />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-text-dark truncate">{tx.description || tx.category}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{tx.category}</span>
+                                      <span className="text-[10px] text-text-muted">· {dateLabel}</span>
+                                    </div>
+                                  </div>
+                                  <p className={cn(
+                                    "text-sm font-bold font-headline shrink-0",
+                                    isPayment ? "text-primary" : isSpend ? "text-danger" : "text-text-muted"
+                                  )}>
+                                    {isPayment ? '+' : '-'}{formatCurrency(Number(tx.amount), isPrivacyMode)}
+                                  </p>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  );
+                })()}
               </section>
             )}
           </div>

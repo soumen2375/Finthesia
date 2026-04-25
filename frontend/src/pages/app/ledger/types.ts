@@ -9,8 +9,28 @@ export interface Ledger {
   description?: string;
   is_default?: boolean;
   is_active?: boolean;
+  registered_number?: string;
+  business_address?: string;
+  business_category?: string;
+  business_type?: string;
+  gstin?: string;
+  bank_account?: string;
+  staff_count?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface UnifiedTransaction {
+  id: string;
+  user_id: string;
+  amount: number;
+  category: string;
+  description?: string;
+  transaction_date: string;
+  type: 'income' | 'expense' | string;
+  is_active: boolean;
+  created_at: string;
+  source_table: string;
 }
 
 export interface CashEntry {
@@ -37,6 +57,8 @@ export interface PartyInfo {
   total_got: number;
   party_type?: 'customer' | 'vendor';
   ledger_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // =============================================
